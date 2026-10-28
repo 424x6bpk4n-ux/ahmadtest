@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CXR TB 2021">
+<meta name="theme-color" content="#f0f0f0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
+</head>
+<body>
+<title>CXR Tuberculosis 2021 Yaushev</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: the Iren test-player window - question strip on top, scrolling question in the middle,
+   control bar at the bottom; results as three tabs. Deliberately a single light "Windows" look. */
+:root{
+  --face:#f0f0f0; --win:#ffffff; --ink:#000000; --ink-dim:#6d6d6d; --line:#a0a0a0; --q-border:#9e9e9e;
+  --sel:#99ccff; --ans:#0066ff; --unans:#808080; --cur:#800000; --ok:#00e000; --bad:#e00000;
+  --timer:#aaccff; --cat:#d0d0d0; --slot:#a0a0a0; --grey-label:#a6a6a6; --pie:#c0c0c0;
+  --btn:#e1e1e1; --btn-b:#adadad; --hov:#e5f1fb; --focus:#0078d7; --dis-bg:#cccccc; --dis-b:#bfbfbf; --dis-ink:#8a8a8a;
+  --list-sel:#3096fa; --shade:rgba(0,0,0,.2); --red:#ff0000;
+  --f-ui:"Segoe UI",Tahoma,system-ui,-apple-system,"Helvetica Neue",sans-serif;
+  --f-q:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  --fs-ui:12px; --fs-q:16px; --btn-h:23px; --sq-h:16px;
+  color-scheme:light;
+}
+@media (pointer:coarse){ :root{ --fs-ui:15px; --btn-h:36px; --sq-h:22px; } }
+html{box-sizing:border-box;height:100%;background:var(--face)}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+body{height:100%;margin:0;overflow:hidden;background:var(--face);color:var(--ink);
+  font:var(--fs-ui)/1.35 var(--f-ui);-webkit-text-size-adjust:100%;text-size-adjust:100%;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#app{height:100%;display:flex;flex-direction:column;min-width:0}
+button{font:inherit;color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:1px dotted var(--ink);outline-offset:1px}
+
+/* ---------- buttons */
+.btn{background:var(--btn);border:1px solid var(--btn-b);border-radius:0;min-height:var(--btn-h);
+  padding:2px 12px;min-width:75px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:5px}
+.btn:hover:not(:disabled){background:var(--hov);border-color:var(--focus)}
+.btn.def{border-color:var(--focus);box-shadow:inset 0 0 0 1px var(--focus)}
+.btn:disabled{background:var(--dis-bg);border-color:var(--dis-b);color:var(--dis-ink);cursor:default;box-shadow:none}
+.tb{background:none;border:1px solid transparent;padding:2px 6px;min-height:var(--btn-h);display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap}
+.tb:hover:not(:disabled){background:var(--hov);border-color:#cce4f7}
+.tb img{width:16px;height:16px}
+.tb:disabled{color:var(--dis-ink);cursor:default}
+.tb:disabled img{filter:grayscale(1);opacity:.5}
+.lnk{background:none;border:0;padding:4px 0;color:var(--grey-label);text-decoration:underline;cursor:pointer;font-size:11px}
+.tb.down{background:#cce4f7;border-color:#99c9ef}
+
+/* ---------- start screen (choose Test or Practice) */
+.start{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:24px 0}
+.start h1{font:400 24px/1.25 var(--f-q);margin:0;text-align:center;text-wrap:balance}
+.start .org{margin:-12px 0 0;color:var(--ink-dim);text-align:center}
+.modes{display:grid;gap:12px;width:min(440px,100%)}
+.mode{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px 16px;background:var(--btn);border:1px solid var(--btn-b);cursor:pointer;min-height:64px}
+.mode b{font-size:calc(var(--fs-ui) + 4px);font-weight:600}
+.mode span{color:var(--ink-dim)}
+.mode:hover{background:var(--hov);border-color:var(--focus)}
+.mode.def{border-color:var(--focus);box-shadow:inset 0 0 0 1px var(--focus)}
+.start .lnk{margin-top:4px}
+
+/* ---------- top strip */
+.top{display:flex;align-items:center;gap:8px;padding:6px 0 7px;border-bottom:1px solid var(--line);flex:none}
+.qlabel{white-space:nowrap;flex:none}
+.diagram{flex:1;min-width:0;display:grid;gap:2px;grid-auto-rows:var(--sq-h)}
+.sq{display:block;border:0;padding:0;margin:0;min-width:0;background:var(--unans);cursor:pointer;border-radius:0}
+.sq.a{background:var(--ans)} .sq.ok{background:var(--ok)} .sq.bad{background:var(--bad)}
+.sq.cur{box-shadow:inset 0 0 0 2px var(--cur),inset 0 0 0 3px var(--win)}
+.sq.lock{cursor:default}
+
+/* ---------- question */
+.main{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:12px 0}
+.q{display:flex;flex-direction:column;gap:12px;min-width:0}
+.form{background:var(--win);border:1px solid var(--q-border);padding:4px 6px 6px;font:var(--fs-q)/1.2 var(--f-q);
+  white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.form img,.ct img,.itm img,.base img{max-width:100%;height:auto;vertical-align:top}
+.choices{display:flex;flex-direction:column;gap:13px}
+.choice{display:flex;align-items:flex-start;gap:10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.choice.dis{cursor:default}
+.mark{flex:none;width:13px;height:13px;margin-top:4px;border:1px solid #333;background:var(--win);position:relative}
+.mark.r{border-radius:50%}
+.choice.on .mark.r::after{content:"";position:absolute;inset:2px;border-radius:50%;background:#000}
+.choice.on .mark.c::after{content:"";position:absolute;left:3px;top:0;width:4px;height:8px;border:solid #000;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.choice.dis .mark{border-color:#bcbcbc;background:#f4f4f4}
+.choice.dis.on .mark::after{border-color:#6d6d6d;background:#6d6d6d}
+.choice.dis.on .mark.c::after{background:none}
+.ct{flex:1;min-width:0;background:var(--win);padding:5px 5px 4px;font:var(--fs-q)/1.2 var(--f-q);white-space:pre-wrap;overflow-wrap:anywhere}
+.choice.on .ct{background:var(--sel)}
+@media (pointer:coarse){ .mark{width:20px;height:20px;margin-top:2px} .choice.on .mark.r::after{inset:4px}
+  .choice.on .mark.c::after{left:6px;top:1px;width:6px;height:12px} }
+
+/* ---------- classify / match */
+.cls,.mt{display:grid;grid-template-columns:minmax(0,1fr) 2px minmax(0,1fr);gap:0 10px;align-items:start}
+.vsep{background:var(--line);align-self:stretch;width:2px}
+.cats,.mrows,.pool{display:flex;flex-direction:column;min-width:0}
+.cats{gap:20px} .pool{gap:13px;min-height:44px;align-self:stretch}
+.cat-h{background:var(--cat);border:1px solid var(--q-border);border-bottom:0;padding:3px 5px;font:var(--fs-q)/1.2 var(--f-q);white-space:pre-wrap}
+.cat-b{background:var(--cat);border:1px solid #000;min-height:48px;padding:9px 9px 38px;display:flex;flex-direction:column;gap:12px}
+.itm{background:var(--win);border:1px solid var(--q-border);padding:4px 5px;font:var(--fs-q)/1.2 var(--f-q);white-space:pre-wrap;overflow-wrap:anywhere;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-y}
+.ed .itm{cursor:grab}
+.itm.ph{visibility:hidden}
+.itm.picked{outline:2px solid var(--focus);outline-offset:1px}
+.itm.lift{opacity:.35}
+.drop.over .cat-b,.drop.over .mslot,.pool.over{box-shadow:inset 0 0 0 2px var(--focus)}
+.mrows{gap:14px}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) 14px minmax(0,1fr);align-items:center}
+.base{background:var(--win);border:1px solid var(--q-border);padding:4px 5px;font:var(--fs-q)/1.2 var(--f-q);white-space:pre-wrap;overflow-wrap:anywhere}
+.conn{height:2px;background:var(--line)}
+.mslot{background:var(--slot);border:1px solid #000;min-height:32px;padding:1px;display:flex;flex-direction:column}
+.mslot .itm{border-color:#000}
+.ghost{position:fixed;left:0;top:0;z-index:100;pointer-events:none;opacity:.9;box-shadow:0 6px 18px var(--shade);margin:0}
+
+/* ---------- bottom bar */
+.bot{flex:none;display:grid;grid-template-columns:auto auto auto auto 1fr auto;grid-template-areas:"sub nav res tim . fin";
+  align-items:center;column-gap:35px;row-gap:6px;padding:7px 0 8px;border-top:1px solid var(--line)}
+#bSubmit{grid-area:sub;min-width:104px} .nav{grid-area:nav;display:flex;gap:2px} .res{grid-area:res;white-space:nowrap}
+.timer{grid-area:tim;display:flex;align-items:center;gap:4px} #bFinish{grid-area:fin}
+#bCorrect{grid-area:tim;justify-self:start}
+.qs-top .sw{display:flex;gap:2px;flex:none}
+.tbox{position:relative;width:64px;height:17px;border:1px solid #000;background:var(--win);display:grid;place-items:center;
+  font:700 11px/1 var(--f-ui);font-variant-numeric:tabular-nums}
+.tfill{position:absolute;left:0;top:0;bottom:0;background:var(--timer)}
+.tbox span{position:relative}
+.tbox.exp{color:var(--red)}
+@media (pointer:coarse){ .tbox{width:78px;height:24px;font-size:13px} }
+
+/* ---------- dialogs */
+.ovl{position:fixed;inset:0;z-index:50;background:var(--shade);display:grid;place-items:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dlg{background:var(--face);border:1px solid #7a7a7a;box-shadow:0 10px 30px var(--shade);max-width:100%;max-height:100%;display:flex;flex-direction:column;min-width:0}
+.dlg-t{background:var(--win);padding:7px 10px;border-bottom:1px solid #dcdcdc;flex:none}
+.dlg-b{padding:14px 16px 12px;display:flex;gap:12px;align-items:flex-start}
+.dlg-btns{display:flex;gap:10px;justify-content:center;padding:4px 16px 12px;flex:none}
+.dlg-btns.left{justify-content:flex-start;padding-top:8px}
+.qico{flex:none;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#7fa7da,#2c5aa0);color:#fff;
+  display:grid;place-items:center;font:700 19px/1 var(--f-q);box-shadow:inset 0 0 0 1px #1d3f74}
+.ico{width:14px;height:14px;display:inline-block;flex:none}
+.brw{width:min(825px,100%);height:min(550px,100%)}
+.br-list{flex:1;min-height:0;overflow:auto;margin:7px 7px 0;background:var(--win);border:1px solid var(--q-border);font-size:11px;-webkit-overflow-scrolling:touch}
+.br-row{display:flex;gap:10px;padding:0 4px;line-height:14px;cursor:pointer;white-space:nowrap}
+.br-n{flex:none;width:28px;text-align:right;font-variant-numeric:tabular-nums}
+.br-t{overflow:hidden;text-overflow:ellipsis}
+.br-row.done{color:var(--dis-ink)}
+.br-row.cur{font-weight:700}
+.br-row.sel{background:var(--list-sel);color:var(--win)}
+@media (pointer:coarse){ .br-list{font-size:14px} .br-row{line-height:20px;padding:8px 6px} .br-t{white-space:normal} .br-row{white-space:normal} }
+.about{width:min(560px,100%);height:min(440px,100%)}
+.about-txt{flex:1;min-height:0;overflow:auto;margin:7px;padding:6px 8px;background:var(--win);border:1px solid var(--q-border);white-space:pre-wrap;font:12px/1.4 var(--f-ui);-webkit-user-select:text;user-select:text}
+
+/* ---------- results */
+.results{flex:1;min-height:0;display:flex;flex-direction:column;padding-top:7px}
+.tabs{display:flex;align-items:flex-end;flex:none;overflow-x:auto}
+.tab{background:var(--face);border:1px solid var(--line);border-bottom:0;padding:2px 8px;margin-right:-1px;cursor:pointer;white-space:nowrap;min-height:calc(var(--btn-h) - 2px)}
+.tab.sel{background:var(--face);position:relative;top:1px;z-index:1;padding-bottom:4px}
+.tabpage{flex:1;min-height:0;border:1px solid var(--line);background:var(--face);display:flex;flex-direction:column}
+.rbot{flex:none;display:flex;align-items:center;justify-content:space-between;padding:7px 0 8px}
+.overall{padding:14px;display:flex;flex-wrap:wrap;gap:14px 25px;overflow:auto;align-items:flex-start}
+.pie{flex:none;width:200px;height:200px}
+.kv{display:grid;grid-template-columns:auto minmax(0,auto);column-gap:10px;row-gap:4px;font-family:var(--f-q);align-content:start;min-width:0}
+.kv .k{color:var(--grey-label);text-align:right;font-size:28px;white-space:nowrap}
+.kv .v{font-size:28px;overflow-wrap:anywhere}
+.kv .k.s,.kv .v.s{font-size:19px;padding-top:22px}
+@media (max-width:520px){ .pie{width:150px;height:150px} .kv .k,.kv .v{font-size:23px} .kv .k.s,.kv .v.s{font-size:16px} }
+.qs{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 10px}
+.qs-top{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);flex:none}
+.qs-main{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:12px 2px}
+.qs-det{flex:none;border-top:1px solid var(--line);padding:6px 0}
+.qs-nav{flex:none;border-top:1px solid var(--line);padding:5px 0;display:flex;gap:2px}
+.tblwrap{flex:1;min-height:0;overflow:auto;margin:7px;border:1px solid var(--q-border);background:var(--win)}
+table.sec{border-collapse:collapse;font-size:11px;min-width:100%}
+table.sec th{font-weight:400;text-align:left;padding:2px 6px;border-right:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;background:var(--win);cursor:pointer;white-space:nowrap;position:sticky;top:0}
+table.sec th.num,table.sec td.num{text-align:right;font-variant-numeric:tabular-nums}
+table.sec td{padding:1px 6px;white-space:nowrap}
+table.sec th .ar{color:var(--grey-label);font-size:9px;margin-left:6px}
+table.sec th.blank{width:100%;cursor:default}
+@media (pointer:coarse){ table.sec{font-size:14px} table.sec td{padding:6px 8px} table.sec th{padding:6px 8px} }
+
+/* ---------- narrow screens (phones) */
+@media (max-width:700px){
+  .top{display:grid;grid-template-columns:1fr auto;grid-template-areas:"lab br" "dia dia";row-gap:6px}
+  .top .qlabel{grid-area:lab} .top #bBrowse{grid-area:br} .top .diagram{grid-area:dia}
+  .bot{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"sub nav nav" "res tim fin";column-gap:12px}
+  .nav{justify-self:start} .timer,#bCorrect{justify-self:center}
+  .cls,.mt{grid-template-columns:minmax(0,1fr);row-gap:16px}
+  .vsep{width:auto;height:2px}
+  .qs-top{display:grid;grid-template-columns:1fr;row-gap:6px}
+}
+@media (max-width:380px){ #bSubmit{min-width:84px} .btn{padding:2px 9px;min-width:64px} .bot{column-gap:8px} }
+@media (prefers-reduced-motion:reduce){ *{scroll-behavior:auto!important} }
+</style>
+
+<div id="app" aria-live="off"></div>
+
+<script>
+(function () {
+'use strict';
+var DATA = {"title":"CXR Tuberculosis 2021 Yaushev","id":"cb4736e9701e0b1d","sections":[{"title":"Localization","q":[{"t":"select","w":1.0,"en":true,"tag":"54","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/1.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Upper right lobe"]},{"k":true,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["Middle lobe on the right"]},{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":false,"f":false,"n":false,"c":["S2 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"59","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/2.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":false,"f":false,"n":false,"c":["S8 of right lung"]},{"k":false,"f":false,"n":false,"c":["Upper lobe of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"60","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/3.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":false,"f":false,"n":false,"c":["Upper lobe of right lung"]},{"k":false,"f":false,"n":false,"c":["S1-2 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"61","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/4.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":false,"f":false,"n":false,"c":["S8 of right lung"]},{"k":true,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["Middle lobe of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"62","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/5.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["S1-2 of right lung"]},{"k":true,"f":false,"n":false,"c":["S2, S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["Middle lobe of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"63","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/6.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S1 of right lung"]},{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":false,"f":false,"n":false,"c":["Upper lobe of right lung"]},{"k":true,"f":false,"n":false,"c":["S2 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"64","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/7.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["S2 or S3 of left lung"]},{"k":false,"f":false,"n":false,"c":["S6 of left lung"]},{"k":false,"f":false,"n":false,"c":["Root of lung on the left"]},{"k":false,"f":false,"n":false,"c":["Upper lobe of left lung"]},{"k":false,"f":false,"n":false,"c":["S1-2 of left lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"65","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/8.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["S2 of left lung"]},{"k":true,"f":false,"n":false,"c":["S6 of left lung"]},{"k":false,"f":false,"n":false,"c":["S1 of left lung"]},{"k":false,"f":false,"n":false,"c":["S3 of left lung"]},{"k":false,"f":false,"n":false,"c":["S8 of left lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"66","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/9.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["S10 of right lung"]},{"k":true,"f":false,"n":false,"c":["S8 of right lung"]},{"k":false,"f":false,"n":false,"c":["S4 of right lung"]},{"k":false,"f":false,"n":false,"c":["S5 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"67","c":["Identify possible localization of the single nodule ....",0,0,{"i":"images/10.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["S6 of left lung"]},{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":true,"f":false,"n":false,"c":["S3 of left lung"]},{"k":false,"f":false,"n":false,"c":["S2 of left lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"69","c":["Identify possible localization of round shape mass ....",0,0,{"i":"images/11.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S6 of left lung"]},{"k":false,"f":false,"n":false,"c":["S1 of left lung"]},{"k":false,"f":false,"n":false,"c":["S3 of left lung"]},{"k":false,"f":false,"n":false,"c":["S2 of left lung"]},{"k":true,"f":false,"n":false,"c":["S2 or S3 of left lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"70","c":["Identify possible localization of the round shape mass ....",0,0,{"i":"images/12.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":true,"f":false,"n":false,"c":["S3 of left lung"]},{"k":false,"f":false,"n":false,"c":["S2 of left lung"]},{"k":false,"f":false,"n":false,"c":["S1 of left lung"]},{"k":false,"f":false,"n":false,"c":["S6 of left lung"]},{"k":false,"f":false,"n":false,"c":["Middle lobe of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"71","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/13.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Root of right lung"]},{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["Middle lobe of right lung"]},{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":false,"f":false,"n":false,"c":["S8 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"72","c":["Identify possible localization of single nodle ....",0,0,{"i":"images/14.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S6 or S9 of right lung"]},{"k":false,"f":false,"n":false,"c":["S8 of right lung"]},{"k":true,"f":false,"n":false,"c":["S4 or S9 of right lung"]},{"k":false,"f":false,"n":false,"c":["S2 or S3 of right lung"]},{"k":false,"f":false,"n":false,"c":["S10 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"73","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/15.jpg"},0,0],"ch":[{"k":false,"f":false,"n":false,"c":["S8 of right lung"]},{"k":false,"f":false,"n":false,"c":["S1 of right lung"]},{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":true,"f":false,"n":false,"c":["S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["S6 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"74","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/16.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["S4 of right lung"]},{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":false,"f":false,"n":false,"c":["S1 of right lung"]},{"k":true,"f":false,"n":false,"c":["S2 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"75","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/17.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Upper lobe of right lung"]},{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["S1 of right lung"]},{"k":false,"f":false,"n":false,"c":["S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["S1-2 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"76","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/18.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["S5 of right lung"]},{"k":true,"f":false,"n":false,"c":["S4 of right lung"]},{"k":false,"f":false,"n":false,"c":["Middle lobe opf right lung"]},{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["S8 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"77","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/19.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S4 of right lung"]},{"k":false,"f":false,"n":false,"c":["S5 of right lung"]},{"k":true,"f":false,"n":false,"c":["S9 of right lung"]},{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["Low lobe of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"78","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/20.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Middle lobe of right lung"]},{"k":false,"f":false,"n":false,"c":["S8 of right lung"]},{"k":false,"f":false,"n":false,"c":["S4 of right lung"]},{"k":true,"f":false,"n":false,"c":["S5 of right lung"]},{"k":false,"f":false,"n":false,"c":["S10 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"79","c":["Identify possible localization of Dissemination ....",0,0,{"i":"images/21.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S1, S2 of left lung"]},{"k":false,"f":false,"n":false,"c":["S1, S2, S6 of left lung"]},{"k":false,"f":false,"n":false,"c":["Middle lobe of left lung"]},{"k":false,"f":false,"n":false,"c":["Upper lobe of left lung"]},{"k":true,"f":false,"n":false,"c":["Subcortical location"]}]},{"t":"select","w":1.0,"en":true,"tag":"80","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/22.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Root of lung on the right"]},{"k":false,"f":false,"n":false,"c":["S6 of left lung"]},{"k":false,"f":false,"n":false,"c":["S5 of left lung"]},{"k":false,"f":false,"n":false,"c":["Middle lobe on the left"]},{"k":false,"f":false,"n":false,"c":["S5 of left lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"81","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/23.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":true,"f":false,"n":false,"c":["Costo-phrenic angle "]},{"k":false,"f":false,"n":false,"c":["S8 of right lung"]},{"k":false,"f":false,"n":false,"c":["Miidle lobe on the right"]},{"k":false,"f":false,"n":false,"c":["S8, S9 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"82","c":["Identify possible localization of the shadow ....",0,0,{"i":"images/24.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":false,"f":false,"n":false,"c":["S1 of right lung"]},{"k":true,"f":false,"n":false,"c":["S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["Upper lobe of right lung"]},{"k":false,"f":false,"n":false,"c":["S6 of right lung"]}]}]},{"title":"Syndromes","q":[{"t":"select","w":1.0,"en":true,"tag":"1","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/2.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":false,"f":false,"n":false,"c":["Single Nodule"]},{"k":false,"f":false,"n":false,"c":["Limited oppasity"]},{"k":true,"f":false,"n":false,"c":["Ring shape shadow (cavity)"]},{"k":false,"f":false,"n":false,"c":["Ring shape shadow (cyst)"]}]},{"t":"select","w":1.0,"en":true,"tag":"2","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/25.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":false,"f":false,"n":false,"c":["Ring shape shadow (cavity)"]},{"k":false,"f":false,"n":false,"c":["Limited opacity"]},{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":true,"f":false,"n":false,"c":["Round shape mass"]}]},{"t":"select","w":1.0,"en":true,"tag":"3","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/26.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Round shape mass"]},{"k":true,"f":false,"n":false,"c":["Diffuse consolidation"]},{"k":false,"f":false,"n":false,"c":["Limited consolidation"]},{"k":false,"f":false,"n":false,"c":["Ring shape shadow"]},{"k":false,"f":false,"n":false,"c":["Dissemination"]}]},{"t":"select","w":1.0,"en":true,"tag":"4","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/27.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":false,"f":false,"n":false,"c":["Limited Consolidation on the left"]},{"k":false,"f":false,"n":false,"c":["Diffuse Consolidation on the right"]},{"k":true,"f":false,"n":false,"c":["Multiple rings, Giant ring"]},{"k":false,"f":false,"n":false,"c":["Limited Lucency"]}]},{"t":"select","w":1.0,"en":true,"tag":"5","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/28.jpg"},0,0],"ch":[{"k":false,"f":false,"n":false,"c":["Limited Consolidation "]},{"k":false,"f":false,"n":false,"c":["Diffuse Consolidation"]},{"k":false,"f":false,"n":false,"c":["Multiple Rings (cyst)"]},{"k":true,"f":false,"n":false,"c":["Multiple Rings (cavities) "]},{"k":false,"f":false,"n":false,"c":["Dissemination"]}]},{"t":"select","w":1.0,"en":true,"tag":"6","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/29.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Group of nodules "]},{"k":false,"f":false,"n":false,"c":["A lot of mass"]},{"k":false,"f":false,"n":false,"c":["Group of nodules "]},{"k":true,"f":false,"n":false,"c":["Multiple rings (cavities)"]}]},{"t":"select","w":1.0,"en":true,"tag":"7","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/30.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Multiple nodules"]},{"k":true,"f":false,"n":false,"c":["Coin syndrome"]},{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":false,"f":false,"n":false,"c":["Diffuse shadow"]},{"k":false,"f":false,"n":false,"c":["Single mass"]}]},{"t":"select","w":1.0,"en":true,"tag":"8","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/31.jpg"},0],"ch":[{"k":true,"f":false,"n":false,"c":["Dissemination"]},{"k":false,"f":false,"n":false,"c":["Both sides diffuse consolidation"]},{"k":false,"f":false,"n":false,"c":["Group of nodules"]},{"k":false,"f":false,"n":false,"c":["Diffuse lucency"]},{"k":false,"f":false,"n":false,"c":["One side diffuse consolidation"]}]},{"t":"select","w":1.0,"en":true,"tag":"9","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/32.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Group of nodules"]},{"k":false,"f":false,"n":false,"c":["Diffuse consolidation"]},{"k":true,"f":false,"n":false,"c":["Both sides dissemination"]},{"k":false,"f":false,"n":false,"c":["Diffuse lucency"]},{"k":false,"f":false,"n":false,"c":["Round shape mass"]}]},{"t":"select","w":1.0,"en":true,"tag":"10","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/33.jpg"},0,"©Yaushev MF Kazan State Medical University",0],"ch":[{"k":false,"f":false,"n":false,"c":["Group of nodules"]},{"k":true,"f":false,"n":false,"c":["Dissemination"]},{"k":false,"f":false,"n":false,"c":["Consolidation on the right"]},{"k":false,"f":false,"n":false,"c":["A lot of masses "]},{"k":false,"f":false,"n":false,"c":["Diffuse shadow"]}]},{"t":"select","w":1.0,"en":true,"tag":"11","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/34.jpg"},0],"ch":[{"k":true,"f":false,"n":false,"c":["Both sides dissemination"]},{"k":false,"f":false,"n":false,"c":["One side Diffuse consolidation"]},{"k":false,"f":false,"n":false,"c":["Both sides diffuse consolidation"]},{"k":false,"f":false,"n":false,"c":["Round shape mass"]},{"k":false,"f":false,"n":false,"c":["Group of nodules"]}]},{"t":"select","w":1.0,"en":true,"tag":"12","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/35.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Round shape mass"]},{"k":false,"f":false,"n":false,"c":["Diffuse consolidation"]},{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":true,"f":false,"n":false,"c":["Limited opacity "]},{"k":false,"f":false,"n":false,"c":["Dissemination"]}]},{"t":"select","w":1.0,"en":true,"tag":"13","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/36.jpg"},0,0],"ch":[{"k":false,"f":false,"n":false,"c":["Round shape mass"]},{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":false,"f":false,"n":false,"c":["Diffuse consolidation"]},{"k":false,"f":false,"n":false,"c":["Changed root syndrome"]},{"k":true,"f":false,"n":false,"c":["Limited consolidation"]}]},{"t":"select","w":1.0,"en":true,"tag":"14","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/37.jpg"},0],"ch":[{"k":true,"f":false,"n":false,"c":["Limited consolidation "]},{"k":false,"f":false,"n":false,"c":["Diffuse consolidation "]},{"k":false,"f":false,"n":false,"c":["Dissemination "]},{"k":false,"f":false,"n":false,"c":["Group of nodules"]},{"k":false,"f":false,"n":false,"c":["Limited lucency"]}]},{"t":"select","w":1.0,"en":true,"tag":"15","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/38.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Limited consolidation on the right"]},{"k":true,"f":false,"n":false,"c":["Diffuse consolidation on the right"]},{"k":false,"f":false,"n":false,"c":["Both sides Dissemination"]},{"k":false,"f":false,"n":false,"c":["Right side Dissemination"]},{"k":false,"f":false,"n":false,"c":["Diffuse lucency"]}]},{"t":"select","w":1.0,"en":true,"tag":"16","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/39.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Diffuse consolidation"]},{"k":false,"f":false,"n":false,"c":["Dssemination"]},{"k":true,"f":false,"n":false,"c":["Diffuse lucency"]},{"k":false,"f":false,"n":false,"c":["Round shape mass"]},{"k":false,"f":false,"n":false,"c":["Single nodule"]}]},{"t":"select","w":1.0,"en":true,"tag":"17","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/40.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":false,"f":false,"n":false,"c":["Diffuse consolidation"]},{"k":false,"f":false,"n":false,"c":["Round shape mass"]},{"k":true,"f":false,"n":false,"c":["Limited consolidation"]},{"k":false,"f":false,"n":false,"c":["Right side dissemination"]}]},{"t":"select","w":1.0,"en":true,"tag":"18","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/9.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule on the right"]},{"k":false,"f":false,"n":false,"c":["Changed root syndrome on the left"]},{"k":false,"f":false,"n":false,"c":["Dissemination both sides"]},{"k":false,"f":false,"n":false,"c":["Group of nodule on the right"]},{"k":true,"f":false,"n":false,"c":["Round shape mass on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"19","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/41.jpg"},0],"ch":[{"k":true,"f":false,"n":false,"c":["Round shape mass on the right"]},{"k":false,"f":false,"n":false,"c":["Limited consolidation on the right"]},{"k":false,"f":false,"n":false,"c":["Single nodule on the right"]},{"k":false,"f":false,"n":false,"c":["Ring on the right"]},{"k":false,"f":false,"n":false,"c":["Root changed syndrome"]}]},{"t":"select","w":1.0,"en":true,"tag":"20","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/42.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Round shape mass"]},{"k":false,"f":false,"n":false,"c":["Root changed syndrome on the right"]},{"k":true,"f":false,"n":false,"c":["Both side lymphoadenopathy"]},{"k":false,"f":false,"n":false,"c":["Dissemination both sides"]},{"k":false,"f":false,"n":false,"c":["Limited consolidation on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"21","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/43.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Ring shape syndrome (cavity)"]},{"k":false,"f":false,"n":false,"c":["Round shape mass on the left"]},{"k":true,"f":false,"n":false,"c":["Single nodule on the left"]},{"k":false,"f":false,"n":false,"c":["Limited consolidation on the left"]},{"k":false,"f":false,"n":false,"c":["Group of nodules on the left"]}]},{"t":"select","w":1.0,"en":true,"tag":"22","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/44.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule on the right"]},{"k":false,"f":false,"n":false,"c":["Diffuse consolidation on the right"]},{"k":false,"f":false,"n":false,"c":["Limited consolidation on the right"]},{"k":true,"f":false,"n":false,"c":["Diffuse lucency on the right"]},{"k":false,"f":false,"n":false,"c":["Limited lucency (giant cyst)"]}]},{"t":"select","w":1.0,"en":true,"tag":"23","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/45.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Round shape mass on the right"]},{"k":false,"f":false,"n":false,"c":["Giant cyst on the right"]},{"k":false,"f":false,"n":false,"c":["Group of nodules on the right"]},{"k":false,"f":false,"n":false,"c":["Limited consolidation on the right"]},{"k":true,"f":false,"n":false,"c":["Diffuse lucency on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"24","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/4.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Limited shadow (opacity) "]},{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":false,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":false,"f":false,"n":false,"c":["Round shape mass"]},{"k":false,"f":false,"n":false,"c":["Group of nodules"]}]},{"t":"select","w":1.0,"en":true,"tag":"25","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/3.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":true,"f":false,"n":false,"c":["Limited opacity"]},{"k":false,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":false,"f":false,"n":false,"c":["Round shape mass"]}]},{"t":"select","w":1.0,"en":true,"tag":"26","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/46.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":false,"f":false,"n":false,"c":["Group of nodules"]},{"k":true,"f":false,"n":false,"c":["Limited opasity"]},{"k":false,"f":false,"n":false,"c":["Chaged root syndrome"]}]},{"t":"select","w":1.0,"en":true,"tag":"27","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/5.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":false,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":true,"f":false,"n":false,"c":["Limited opacity"]},{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":false,"f":false,"n":false,"c":["Round shape mass"]}]},{"t":"select","w":1.0,"en":true,"tag":"28","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/47.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Round shape mass"]},{"k":false,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":true,"f":false,"n":false,"c":["Limited opacity"]},{"k":false,"f":false,"n":false,"c":["Single nodule"]}]},{"t":"select","w":1.0,"en":true,"tag":"29","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/6.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Cavity (ring shape shadow)"]},{"k":false,"f":false,"n":false,"c":["Group of nodules"]},{"k":false,"f":false,"n":false,"c":["Chronic cavern (ring shape shadow)"]},{"k":false,"f":false,"n":false,"c":["Cyst (ring shape shadow)"]},{"k":false,"f":false,"n":false,"c":["Dissemination on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"30","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/48.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":true,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":false,"f":false,"n":false,"c":["Limited opacity"]},{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":false,"f":false,"n":false,"c":["Round shape mass"]}]},{"t":"select","w":1.0,"en":true,"tag":"31","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/7.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":false,"f":false,"n":false,"c":["Limited opacity"]},{"k":true,"f":false,"n":false,"c":["Round shape mass"]},{"k":false,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":false,"f":false,"n":false,"c":["Cavity"]}]},{"t":"select","w":1.0,"en":true,"tag":"32","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/49.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":false,"f":false,"n":false,"c":["Mass"]},{"k":true,"f":false,"n":false,"c":["Dissemination on the right"]},{"k":false,"f":false,"n":false,"c":["Limited opacity"]},{"k":false,"f":false,"n":false,"c":["Group of nodules on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"33","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/50.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":false,"f":false,"n":false,"c":["Mass"]},{"k":false,"f":false,"n":false,"c":["Single nodule"]},{"k":true,"f":false,"n":false,"c":["Limited opacity"]}]},{"t":"select","w":1.0,"en":true,"tag":"34","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/51.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":false,"f":false,"n":false,"c":["Shift of mediastinum"]},{"k":false,"f":false,"n":false,"c":["Limited  Lucency "]},{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":false,"f":false,"n":false,"c":["Root chached"]}]},{"t":"select","w":1.0,"en":true,"tag":"35","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/52.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Diffuse opacity. Mediastinum is shifted to another side"]},{"k":true,"f":false,"n":false,"c":["Limited opacity. Effusion on the right"]},{"k":false,"f":false,"n":false,"c":["Diffuse opacity. Mediastinum is shifted to another side"]},{"k":false,"f":false,"n":false,"c":["Round shape Mass on the right"]},{"k":false,"f":false,"n":false,"c":["Round shape Mass on the left"]}]},{"t":"select","w":1.0,"en":true,"tag":"36","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/53.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Diffuse opacity on the right"]},{"k":false,"f":false,"n":false,"c":["Dissemination on the right"]},{"k":true,"f":false,"n":false,"c":["System of cavities on the right"]},{"k":false,"f":false,"n":false,"c":["Shift of mediastinum "]},{"k":false,"f":false,"n":false,"c":["Cavity (isolated) on the left"]}]},{"t":"select","w":1.0,"en":true,"tag":"37","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/54.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Diffuse opacity on the right"]},{"k":false,"f":false,"n":false,"c":["Group on nodules on the left"]},{"k":false,"f":false,"n":false,"c":["Shift of mediastinum"]},{"k":true,"f":false,"n":false,"c":["Giant Cavities on the right "]},{"k":false,"f":false,"n":false,"c":["Lucency on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"38","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/55.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule on the left"]},{"k":false,"f":false,"n":false,"c":["Limited opacity on the left"]},{"k":false,"f":false,"n":false,"c":["Group of nodules on the right"]},{"k":false,"f":false,"n":false,"c":["Changed root syndrome on the left"]},{"k":true,"f":false,"n":false,"c":["Round shape mass on the left"]}]},{"t":"select","w":1.0,"en":true,"tag":"39","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/56.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Round shape mass on the right"]},{"k":false,"f":false,"n":false,"c":["Limited opacity on the right"]},{"k":false,"f":false,"n":false,"c":["Diffuse opacity on the right"]},{"k":false,"f":false,"n":false,"c":["Single nodule on the right"]},{"k":false,"f":false,"n":false,"c":["Group of nodules on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"40","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/57.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule on the right"]},{"k":true,"f":false,"n":false,"c":["Round shape mass on the right"]},{"k":false,"f":false,"n":false,"c":["Limited opasity on the right"]},{"k":false,"f":false,"n":false,"c":["Diffuse opacity"]},{"k":false,"f":false,"n":false,"c":["Lucency on the left"]}]},{"t":"select","w":1.0,"en":true,"tag":"41","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/58.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule on the left"]},{"k":false,"f":false,"n":false,"c":["Group of nodules on the left"]},{"k":true,"f":false,"n":false,"c":["Round shape mass on the left"]},{"k":false,"f":false,"n":false,"c":["Limited opacity on the left"]},{"k":false,"f":false,"n":false,"c":["Dissemination on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"42","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/59.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Group of nodules"]},{"k":true,"f":false,"n":false,"c":["Both sides dissemination"]},{"k":false,"f":false,"n":false,"c":["One side dissemination"]},{"k":false,"f":false,"n":false,"c":["Limited opacity on the right"]},{"k":false,"f":false,"n":false,"c":["Both sides Diffuse opacity"]}]},{"t":"select","w":1.0,"en":true,"tag":"43","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/60.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["One side disssemination"]},{"k":false,"f":false,"n":false,"c":["Group of nodules on the right"]},{"k":false,"f":false,"n":false,"c":["Diffuse opacity on the right"]},{"k":true,"f":false,"n":false,"c":["Both sides miliary disssemination"]},{"k":false,"f":false,"n":false,"c":["Both sides Diffuse opacity"]}]},{"t":"select","w":1.0,"en":true,"tag":"44","c":["Identify a main CXR syndrome ....",0,0,{"i":"images/61.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Both sides dissemination"]},{"k":true,"f":false,"n":false,"c":["Both sides dissemination & root changed"]},{"k":false,"f":false,"n":false,"c":["Changed root syndrome"]},{"k":false,"f":false,"n":false,"c":["Both sides Group of nodules"]},{"k":false,"f":false,"n":false,"c":["Diffuse Opacity"]}]},{"t":"select","w":1.0,"en":true,"tag":"45","c":["Identify a main CXR syndrome (HIV, dyspnea, gradual onset) ....",0,0,{"i":"images/62.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Both sides lymphadenopathy"]},{"k":false,"f":false,"n":false,"c":["Both sides Diffuse Opacity"]},{"k":true,"f":false,"n":false,"c":["Both sides Dissemination"]},{"k":false,"f":false,"n":false,"c":["Both sides group of nodules"]},{"k":false,"f":false,"n":false,"c":["Lucency in S8"]}]},{"t":"select","w":1.0,"en":true,"tag":"46","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/63.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule on the right"]},{"k":false,"f":false,"n":false,"c":["Both sides round shape mass"]},{"k":false,"f":false,"n":false,"c":["Diffuse opacity on the right"]},{"k":true,"f":false,"n":false,"c":["Both side Lymphadenopathy"]},{"k":false,"f":false,"n":false,"c":["Group of nodules in S1-2"]}]},{"t":"select","w":1.0,"en":true,"tag":"47","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/64.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Single nodule, root changed syndrome"]},{"k":false,"f":false,"n":false,"c":["Single nodule on the right"]},{"k":false,"f":false,"n":false,"c":["Root changed syndrome on the right"]},{"k":false,"f":false,"n":false,"c":["Round shape mass on the right"]},{"k":false,"f":false,"n":false,"c":["Limited opacity on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"48","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/65.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Single Nodule on the right"]},{"k":false,"f":false,"n":false,"c":["Round shape mass on the right"]},{"k":true,"f":false,"n":false,"c":["Root changed syndrome on the right"]},{"k":false,"f":false,"n":false,"c":["Limited opacity on the left"]},{"k":false,"f":false,"n":false,"c":["Ring shape syndrome in S6"]}]},{"t":"select","w":1.0,"en":true,"tag":"49","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/66.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Single nodule on the right"]},{"k":false,"f":false,"n":false,"c":["Group of nodules on the right"]},{"k":false,"f":false,"n":false,"c":["Round shape mass on the right"]},{"k":true,"f":false,"n":false,"c":["Group of nodules in Roots"]},{"k":false,"f":false,"n":false,"c":["Both sides lucency"]}]},{"t":"select","w":1.0,"en":true,"tag":"50","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/67.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Round shape mass on the left"]},{"k":false,"f":false,"n":false,"c":["Single nodule on the left"]},{"k":true,"f":false,"n":false,"c":["Calcified nodule in root. Roound shape mass "]},{"k":false,"f":false,"n":false,"c":["Dissemination in S6 on the left"]},{"k":false,"f":false,"n":false,"c":["Right root changed syndrome"]}]},{"t":"select","w":1.0,"en":true,"tag":"51","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/21.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Group of nodules on the left"]},{"k":false,"f":false,"n":false,"c":["Limited consolidation on the left"]},{"k":false,"f":false,"n":false,"c":["Diffuse consolidation on the left"]},{"k":true,"f":false,"n":false,"c":["Dissemination on the left"]},{"k":false,"f":false,"n":false,"c":["Round shape mass on the left"]}]},{"t":"select","w":1.0,"en":true,"tag":"52","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/68.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Limited Consolidation on the right"]},{"k":true,"f":false,"n":false,"c":["Cavities on the background of consolidation"]},{"k":false,"f":false,"n":false,"c":["Diffuse consolidation on the right"]},{"k":false,"f":false,"n":false,"c":["Group of nodules on the left"]},{"k":false,"f":false,"n":false,"c":["Dissemination on the left"]}]},{"t":"select","w":1.0,"en":true,"tag":"53","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/69.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Cavity on the right"]},{"k":false,"f":false,"n":false,"c":["Limited opacity on the right"]},{"k":false,"f":false,"n":false,"c":["Single nodule on the right"]},{"k":false,"f":false,"n":false,"c":["Round shape mass on the right"]},{"k":false,"f":false,"n":false,"c":["Cyst on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"55","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/70.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Diffuse opacity on the right"]},{"k":false,"f":false,"n":false,"c":["Limited opacity on the right"]},{"k":false,"f":false,"n":false,"c":["Shift of mediastinum to the right"]},{"k":false,"f":false,"n":false,"c":["Diffuse lucency on the right"]},{"k":false,"f":false,"n":false,"c":["Round shape mass on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"56","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/71.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Diffuse opacitty on the left"]},{"k":false,"f":false,"n":false,"c":["Limited opacitty on the left"]},{"k":false,"f":false,"n":false,"c":["Round shape mass"]},{"k":false,"f":false,"n":false,"c":["Interstitial shadow"]},{"k":false,"f":false,"n":false,"c":["Lucensy on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"57","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/72.jpg"},0,0],"ch":[{"k":false,"f":false,"n":false,"c":["Diffuse opacitty "]},{"k":false,"f":false,"n":false,"c":["Limited opacity"]},{"k":true,"f":false,"n":false,"c":["Oval shape mass"]},{"k":false,"f":false,"n":false,"c":["Changed root syndrome"]}]},{"t":"select","w":1.0,"en":true,"tag":"58","c":["Identify a main CXR syndrome ...",0,0,{"i":"images/13.jpg"},0,0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":true,"f":false,"n":false,"c":["Changed root syndrome on the right"]},{"k":false,"f":false,"n":false,"c":["Round shape shadow on the right"]},{"k":false,"f":false,"n":false,"c":["Limited opacity on the right"]},{"k":false,"f":false,"n":false,"c":["Group of nodules on the left"]},{"k":false,"f":false,"n":false,"c":["Both sides Dissemination"]}]}]},{"title":"Primary TB","q":[{"t":"select","w":1.0,"en":true,"tag":"83","c":["Identify a clinical form of TB ...",0,0,{"i":"images/73.jpg"},0,0],"ch":[{"k":true,"f":false,"n":false,"c":["TB of Intrathoracic Lymph Nodes "]},{"k":false,"f":false,"n":false,"c":["Primary TB complex on the right"]},{"k":false,"f":false,"n":false,"c":["Round shape shadow in right lung"]},{"k":false,"f":false,"n":false,"c":["Focal TB in S1-2 of left lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"84","c":["What is a stage of this clinical form of TB...",0,0,{"i":"images/73.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Stage of infiltration"]},{"k":true,"f":false,"n":false,"c":["Stage of calcification "]},{"k":false,"f":false,"n":false,"c":["Stage of resolution"]},{"k":false,"f":false,"n":false,"c":["Stage of destruction (cavitation)"]}]},{"t":"select","w":1.0,"en":true,"tag":"85","c":["What can you say about genesis of group of nodules in S1-2 of left lung?",0,0,{"i":"images/73.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Exogenic superinfection"]},{"k":false,"f":false,"n":false,"c":["Endogenic reactivation of old nodules"]},{"k":true,"f":false,"n":false,"c":["Result of Lymphogenic dissemination from right root"]},{"k":false,"f":false,"n":false,"c":["Result of Bronchogenic dissemination from right root"]}]},{"t":"select","w":1.0,"en":true,"tag":"86","c":["What is the name of nodules in S1-2 of left lung?",0,0,{"i":"images/73.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Abricosov's nodules"]},{"k":false,"f":false,"n":false,"c":["Ashof-Pul's nodules"]},{"k":false,"f":false,"n":false,"c":["Gohn's focus"]},{"k":true,"f":false,"n":false,"c":["Symon's nodules"]}]},{"t":"select","w":1.0,"en":true,"tag":"87","c":["Identify a clinical form of TB ...",0,"Child 8 years of old",0,0,{"i":"images/74.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Primary Tb complex"]},{"k":false,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes"]},{"k":false,"f":false,"n":false,"c":["Infiltrative TB in S1-2 of right lung"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas of rigt lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"88","c":["What is a stage of this clinical form of TB...",0,0,{"i":"images/74.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Stage of calcification (Gohn's focus)"]},{"k":true,"f":false,"n":false,"c":["Stage of inflltration (bipolarity syndrome)"]},{"k":false,"f":false,"n":false,"c":["Residual changes after TB in past"]},{"k":false,"f":false,"n":false,"c":["Stage of destraction (cavitation)"]}]},{"t":"select","w":1.0,"en":true,"tag":"89","c":["Identify a clinical form of TB ...",0,0,{"i":"images/75.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes"]},{"k":false,"f":false,"n":false,"c":["Foсal TB of S6 of right lung"]},{"k":true,"f":false,"n":false,"c":["Primary Tb complex"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"90","c":["What is the name of lesion in S6 of right lung?",0,0,{"i":"images/75.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Assman's infiltrate"]},{"k":false,"f":false,"n":false,"c":["Gohn's focus"]},{"k":false,"f":false,"n":false,"c":["Lymphadenitis"]},{"k":true,"f":false,"n":false,"c":["Primary affect"]}]},{"t":"select","w":1.0,"en":true,"tag":"91","c":["What is a stage of this clinical form of TB...",0,0,{"i":"images/75.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Stage of resolution (bipolarity syndrome)"]},{"k":false,"f":false,"n":false,"c":["Stage of destraction (cavitation)"]},{"k":false,"f":false,"n":false,"c":["Stage of calcification"]},{"k":false,"f":false,"n":false,"c":["Stage of infiltration"]}]},{"t":"select","w":1.0,"en":true,"tag":"92","c":["How this CXR can be described ?",0,0,{"i":"images/75.jpg"},0,0],"ch":[{"k":false,"f":false,"n":false,"c":["Gohn's focus"]},{"k":true,"f":false,"n":false,"c":["Triad syndrome"]},{"k":false,"f":false,"n":false,"c":["Racket syndrome "]},{"k":false,"f":false,"n":false,"c":["Ball syndrome"]}]},{"t":"select","w":1.0,"en":true,"tag":"93","c":["Identify a clinical form of TB ...",0,0,{"i":"images/76.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes"]},{"k":false,"f":false,"n":false,"c":["Foсal TB of S5 of left lung"]},{"k":true,"f":false,"n":false,"c":["Primary Tb complex"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas of left lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"94","c":["What is the name of lesion in S5 of left lung?",0,0,{"i":"images/76.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Symon's nodule"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas"]},{"k":false,"f":false,"n":false,"c":["Primary affect"]},{"k":true,"f":false,"n":false,"c":["Gohn's focus"]}]},{"t":"select","w":1.0,"en":true,"tag":"95","c":["What is a stage of this clinical form of TB...",0,0,{"i":"images/76.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Stage of calcification"]},{"k":false,"f":false,"n":false,"c":["Stage of destruction (cavitation)"]},{"k":false,"f":false,"n":false,"c":["Stage of infiltration"]},{"k":false,"f":false,"n":false,"c":["Stage of resolution"]}]},{"t":"select","w":1.0,"en":true,"tag":"96","c":["What is the name of lesion in S1 of right lung?",0,0,{"i":"images/77.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Primary affect"]},{"k":true,"f":false,"n":false,"c":["Gohn's focus"]},{"k":false,"f":false,"n":false,"c":["Lymphadenitis"]},{"k":false,"f":false,"n":false,"c":["Assman's infiltrate"]}]},{"t":"select","w":1.0,"en":true,"tag":"97","c":["What is a stage of this clinical form of TB...",0,0,{"i":"images/77.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Stage of destruction (cavitation)"]},{"k":false,"f":false,"n":false,"c":["Stage of infiltration"]},{"k":true,"f":false,"n":false,"c":["Stage of calcification"]},{"k":false,"f":false,"n":false,"c":["Stage of resolution"]}]},{"t":"select","w":1.0,"en":true,"tag":"98","c":["Identify a clinical form of TB ...",0,0,{"i":"images/78.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas of left lung"]},{"k":false,"f":false,"n":false,"c":["Rounf shape infiltrate"]},{"k":true,"f":false,"n":false,"c":["Primary TB complex"]}]},{"t":"select","w":1.0,"en":true,"tag":"99","c":["What is a pathogenic variant of TB?",0,0,{"i":"images/78.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Primary TB"]},{"k":false,"f":false,"n":false,"c":["Secondary TB"]},{"k":false,"f":false,"n":false,"c":["Relaps"]},{"k":false,"f":false,"n":false,"c":["Chronic TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"100","c":["What is a name of lesion in left lung?",0,0,{"i":"images/78.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Gohn's foccus"]},{"k":true,"f":false,"n":false,"c":["Primary affect"]},{"k":false,"f":false,"n":false,"c":["Lymphadenitis"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas"]}]},{"t":"select","w":1.0,"en":true,"tag":"101","c":["What is a stage of this TB process?",0,0,{"i":"images/78.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Stage of calcification"]},{"k":false,"f":false,"n":false,"c":["Stage of destruction (cavitation)"]},{"k":true,"f":false,"n":false,"c":["Stage of infultration"]},{"k":false,"f":false,"n":false,"c":["Stage of axacerbation "]}]},{"t":"select","w":1.0,"en":true,"tag":"102","c":["What about features of Pimary TB on this film?",0,0,{"i":"images/78.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Location of primary affect in S6"]},{"k":false,"f":false,"n":false,"c":["Location of primary affect in S3"]},{"k":false,"f":false,"n":false,"c":["Calcified stone in root"]},{"k":true,"f":false,"n":false,"c":["Location in root"]}]},{"t":"select","w":1.0,"en":true,"tag":"103","c":["Identify a clinical form of TB ...",0,0,{"i":"images/14.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Primary TB complex"]},{"k":false,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes"]},{"k":false,"f":false,"n":false,"c":["Focal TB"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas of lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"104","c":["What is a stage of this TB process?",0,0,{"i":"images/14.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Stage of resolution"]},{"k":true,"f":false,"n":false,"c":["Stage of calcification"]},{"k":false,"f":false,"n":false,"c":["Stage of destruction (cavitation)"]},{"k":false,"f":false,"n":false,"c":["Stage of infiltration"]}]},{"t":"select","w":1.0,"en":true,"tag":"105","c":["What is the name of lesion in S4 of right lung",0,0,{"i":"images/14.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Primary affect"]},{"k":false,"f":false,"n":false,"c":["Symon's focus"]},{"k":true,"f":false,"n":false,"c":["Gohn's focus"]},{"k":false,"f":false,"n":false,"c":["Lymphadenitis"]}]},{"t":"select","w":1.0,"en":true,"tag":"106","c":["Identify a clinical form of TB ...",0,0,{"i":"images/79.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Tuberculomas on the left"]},{"k":false,"f":false,"n":false,"c":["Focal TB on the left"]},{"k":false,"f":false,"n":false,"c":["TB of Intratoracic lymph nodes"]},{"k":true,"f":false,"n":false,"c":["Primary TB complex"]}]},{"t":"select","w":1.0,"en":true,"tag":"107","c":["What is the name of lesion in S1 of left lung",0,0,{"i":"images/79.jpg"},0,0],"ch":[{"k":true,"f":false,"n":false,"c":["Primary affect"]},{"k":false,"f":false,"n":false,"c":["Lymphadenitis"]},{"k":false,"f":false,"n":false,"c":["Gohn's focus"]},{"k":false,"f":false,"n":false,"c":["Assman's infiltrate"]}]},{"t":"select","w":1.0,"en":true,"tag":"108","c":["What a description is more correct for this CXR film?",0,0,{"i":"images/79.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Changes in lung root"]},{"k":true,"f":false,"n":false,"c":["Triad (primary affect, lymphadenitis, lymphagitis)"]},{"k":false,"f":false,"n":false,"c":["Single focus"]},{"k":false,"f":false,"n":false,"c":["Both sides lymphadenopathy "]}]},{"t":"select","w":1.0,"en":true,"tag":"109","c":["What test should be made firstly for the diagnosis of activity of this TB case?",0,0,{"i":"images/79.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Total blood count"]},{"k":false,"f":false,"n":false,"c":["TST"]},{"k":true,"f":false,"n":false,"c":["Diaskintest"]},{"k":false,"f":false,"n":false,"c":["BACTEC"]}]},{"t":"select","w":1.0,"en":true,"tag":"110","c":["Identify a clinical form of TB ...",0,0,{"i":"images/13.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Miliary TB"]},{"k":false,"f":false,"n":false,"c":["Primary TB"]},{"k":false,"f":false,"n":false,"c":["Primary TB complex"]},{"k":true,"f":false,"n":false,"c":["TB of Intratoracic lymph nodes"]}]},{"t":"select","w":1.0,"en":true,"tag":"111","c":["What is a CXR form of this TB?",0,0,{"i":"images/13.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Tumor like form of Intrathoracic lymph nodes TB"]},{"k":false,"f":false,"n":false,"c":["Infiltrative form of Intrathoracic lymph nodes TB"]},{"k":false,"f":false,"n":false,"c":["Triad like form of Intrathoracic lymph nodes TB"]},{"k":false,"f":false,"n":false,"c":["Round shape form of Intrathoracic lymph nodes TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"112","c":["What the group of intrathoracic lymph nodes changed?",0,0,{"i":"images/13.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Paratracheal"]},{"k":true,"f":false,"n":false,"c":["Broncho-pulmonary"]},{"k":false,"f":false,"n":false,"c":["Bifurcation"]},{"k":false,"f":false,"n":false,"c":["Trachea-bronchial"]}]},{"t":"select","w":1.0,"en":true,"tag":"113","c":["Identify a clinical form of TB ...",0,0,{"i":"images/80.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Infiltrative TB"]},{"k":false,"f":false,"n":false,"c":["TB Pleurisy"]},{"k":true,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes"]},{"k":false,"f":false,"n":false,"c":["Focal TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"114","c":["What was the main clinical symptom presented by this patient?",0,0,{"i":"images/80.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Hemoptisys"]},{"k":false,"f":false,"n":false,"c":["Cough"]},{"k":false,"f":false,"n":false,"c":["Febrile temperature"]},{"k":true,"f":false,"n":false,"c":["Chest pain"]}]},{"t":"select","w":1.0,"en":true,"tag":"124","c":["What is a complication of this clinical form of 1st TB",0,0,{"i":"images/80.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Pleurisy"]},{"k":false,"f":false,"n":false,"c":["Caseation"]},{"k":false,"f":false,"n":false,"c":["Atelectasis"]},{"k":false,"f":false,"n":false,"c":["Lymphogenic dissemination"]}]},{"t":"select","w":1.0,"en":true,"tag":"116","c":["What is a CXR form of this TB?",0,0,{"i":"images/22.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cloud like form of Intrathoracic lymph nodes TB"]},{"k":true,"f":false,"n":false,"c":["Infiltrative form of Intrathoracic lymph nodes TB"]},{"k":false,"f":false,"n":false,"c":["Tumor like form of Intrathoracic lymph nodes TB"]},{"k":false,"f":false,"n":false,"c":["Round shape form of Intrathoracic lymph nodes TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"117","c":["What is a pathogenic variant of TB?",0,0,{"i":"images/22.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Relapse"]},{"k":false,"f":false,"n":false,"c":["Secondary TB"]},{"k":true,"f":false,"n":false,"c":["Primary TB"]},{"k":false,"f":false,"n":false,"c":["Chronic TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"118","c":["What is the main affecting factor on border of root in this case?",0,0,{"i":"images/22.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Midiastinal pleurisy "]},{"k":false,"f":false,"n":false,"c":["Cavitation"]},{"k":false,"f":false,"n":false,"c":["Hyperplasia of lymph nodes"]},{"k":true,"f":false,"n":false,"c":["Perifocal infiltration"]}]},{"t":"select","w":1.0,"en":true,"tag":"119","c":["What differential diagnosis should be made first in this case?",0,0,{"i":"images/22.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Pneumonia"]},{"k":false,"f":false,"n":false,"c":["Hodgkin disease"]},{"k":false,"f":false,"n":false,"c":["Sarcoidosis "]},{"k":false,"f":false,"n":false,"c":["Cat scratch syndrome "]}]},{"t":"select","w":1.0,"en":true,"tag":"121","c":["Identify a clinical form of TB ...",0,"Child is 5 years old",0,0,{"i":"images/81.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Infiltrative TB of S2 on the right"]},{"k":true,"f":false,"n":false,"c":["Primary Tb complex"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas of right lung"]},{"k":false,"f":false,"n":false,"c":["TB of Inthrathoracic lymph nodes"]}]},{"t":"select","w":1.0,"en":true,"tag":"122","c":["What is the name of lesion in S1 of right lung?",0,0,{"i":"images/81.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Lymphadenitis"]},{"k":false,"f":false,"n":false,"c":["Gohn's focus"]},{"k":true,"f":false,"n":false,"c":["Primary affect"]},{"k":false,"f":false,"n":false,"c":["Lymphangitis"]}]},{"t":"select","w":1.0,"en":true,"tag":"123","c":["What is a stage of TB process?",0,0,{"i":"images/81.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Condensation"]},{"k":false,"f":false,"n":false,"c":["Destruction (cavitation)"]},{"k":false,"f":false,"n":false,"c":["Calcification"]},{"k":true,"f":false,"n":false,"c":["Infiltration"]}]},{"t":"select","w":1.0,"en":true,"tag":"125","c":["Identify changes due to TB ...",0,"Age 33",0,0,{"i":"images/82.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Gohn's focus"]},{"k":false,"f":false,"n":false,"c":["Focal TB on the right"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas on the right"]},{"k":false,"f":false,"n":false,"c":["Round shape infiltrate"]}]},{"t":"select","w":1.0,"en":true,"tag":"126","c":["What is a stage of lesion in S3 on the right",0,"Age of 33",0,0,{"i":"images/82.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Stage of calcification. Active TB"]},{"k":true,"f":false,"n":false,"c":["Residual changes after Primary Tb in past"]},{"k":false,"f":false,"n":false,"c":["Stage of infiltration"]},{"k":false,"f":false,"n":false,"c":["Stage of resolution"]}]},{"t":"select","w":1.0,"en":true,"tag":"127","c":["What is a clinical form of TB?",0,"Age of 13 ",0,0,{"i":"images/67.jpg"},0,0],"ch":[{"k":false,"f":false,"n":false,"c":["Focal TB"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas"]},{"k":true,"f":false,"n":false,"c":["Primary TB complex"]},{"k":false,"f":false,"n":false,"c":["Infiltrative TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"128","c":["What is a name of lesion in S1-S2 on the left?",0,"Age of 13",0,0,{"i":"images/67.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Secondary tuberculomas"]},{"k":false,"f":false,"n":false,"c":["Lymphangitis"]},{"k":false,"f":false,"n":false,"c":["Lymphadenitis"]},{"k":true,"f":false,"n":false,"c":["Primary tuberculomas"]}]},{"t":"select","w":1.0,"en":true,"tag":"129","c":["How to identify activity of this process?",0,"Age of 13",0,0,{"i":"images/67.jpg"},0,0],"ch":[{"k":true,"f":false,"n":false,"c":["To carry out Diaskintest"]},{"k":false,"f":false,"n":false,"c":["To carry out  TST"]},{"k":false,"f":false,"n":false,"c":["On the basis of chemotherapy"]},{"k":false,"f":false,"n":false,"c":["On the basis of Ziehl-Neelsen staining of sputum"]}]},{"t":"classify","w":2.0,"en":true,"tag":"202","c":["What is typical for Primary TB and what - for Secondary TB? Distribute!",0],"cats":[{"c":["Primary TB"],"it":[["Age <15 years. Children"],["Paraspecific reactions"],["Changes in hilar"],["Infection with MBT 1-2 years before"],["Calcification"],["TB of bronchus "]]},{"c":["Secondary TB"],"it":[["Age >15 years. Adults"],["Lung tissue localization"],["Infection with MBT in past"],["Cavitation"]]}]},{"t":"classify","w":2.0,"en":true,"tag":"203","c":["What are the tasks for perfoming of Tuberculin Skin Test & Diaskintest?"],"cats":[{"c":["TST"],"it":[["Diagnosis of Primary TB"],["Diagnosis of Primary Infection (conversion)"],["Indication for BCG-revaccination"],["Identification of Induration size Growth"],["Identification of hyperergic responce "],["Estimation the number of Infected persons in General population"]]},{"c":["Diaskintaest"],"it":[["Differential diagnosis of TB"],["Interpretation of TST-results"],["Estimation of TB activity"],["Estimation of treatment efficacy "],["Diagnosis of LTBI"]]}]},{"t":"classify","w":1.0,"en":true,"tag":"204","c":["What are the typical signs of Primary TB in this case?",0,0,{"i":"images/67.jpg"},0,"©Yaushev MF Kazan State Medical University"],"cats":[{"c":["Primary"],"it":[["Age. Children"],["Chages in broncho-pulmonary lymph nodes"],["High density. Well-defined border of Shadow in S2-3 (calcification)"]]},{"c":["Secondary"],"it":[["Age. Adult"],["Changes in Lung tissue"],["Round shape mass in S2-3"],["Blurred border of mass in S2-3"]]}]}]},{"title":"Focal Tuberculomas","q":[{"t":"select","w":1.0,"en":true,"tag":"120","c":["Identify a clinical form of TB ...",0,0,{"i":"images/43.jpg"},0,0,0,0],"ch":[{"k":true,"f":false,"n":false,"c":["Residual changes after Primary Tb complex"]},{"k":false,"f":false,"n":false,"c":["Focal TB of S3 on the left"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas of S3 on the left"]},{"k":false,"f":false,"n":false,"c":["Hamartoma"]}]},{"t":"select","w":1.0,"en":true,"tag":"130","c":["What is a clinical form of TB?",0,"Age of 27",0,0,{"i":"images/83.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Focal TB of S1-2 of right lung"]},{"k":true,"f":false,"n":false,"c":["Infiltrative TB in S6 of left lung "]},{"k":false,"f":false,"n":false,"c":["Tuberculomas in S6 of left lung "]},{"k":false,"f":false,"n":false,"c":["Primary TB complex of left lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"131","c":["What is a genesis of group of nodules in S1-2 of right lung?",0,0,{"i":"images/83.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Focal TB due to reactivation of old foci"]},{"k":false,"f":false,"n":false,"c":["Focal TB due to superinfection"]},{"k":true,"f":false,"n":false,"c":["Lympho-gematogenous dissemination from S6"]},{"k":false,"f":false,"n":false,"c":["Stage of bronchogenic dissemination from S6"]}]},{"t":"select","w":1.0,"en":true,"tag":"132","c":["Identify a clinical form of TB ...",0,0,{"i":"images/84.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes (active)"]},{"k":false,"f":false,"n":false,"c":["Infltrative TB broncho-lobular CXR form"]},{"k":false,"f":false,"n":false,"c":["Focal TB as exacerbation of Symon's nodules"]},{"k":true,"f":false,"n":false,"c":["Residual changes after TB of Intrathoracic lymph nodes"]}]},{"t":"select","w":1.0,"en":true,"tag":"133","c":["What is a name of nodules in S1-2 of left lung?",0,0,{"i":"images/84.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Symon's nodules due to TB of Intrathoracic lymph nodes"]},{"k":false,"f":false,"n":false,"c":["Group of nodules as residual changes after Focal TB"]},{"k":false,"f":false,"n":false,"c":["Focal TB in stage of infiltration"]},{"k":false,"f":false,"n":false,"c":["Gohn's nodules in right root"]}]},{"t":"select","w":1.0,"en":true,"tag":"134","c":["Identify a clinical form of TB ...",0,"Age of 24.",0,0,{"i":"images/85.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Disseminated TB"]},{"k":true,"f":false,"n":false,"c":["Focal TB of S2 on the right"]},{"k":false,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes"]},{"k":false,"f":false,"n":false,"c":["Helthy"]},{"k":false,"f":false,"n":false,"c":["TB intoxication of children & teenagers"]}]},{"t":"select","w":1.0,"en":true,"tag":"136","c":["Identify a clinical form of TB ...",0,0,{"i":"images/86.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Infiltrative TB of S2 on the right"]},{"k":false,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes"]},{"k":false,"f":false,"n":false,"c":["Dissemination"]},{"k":true,"f":false,"n":false,"c":["Focal TB of S2 on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"137","c":["What is a pathogenic variant of this clinical form of TB?",0,"1 year before CXR was normal",0,0,{"i":"images/86.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Soft Focal TB"]},{"k":false,"f":false,"n":false,"c":["Fibrous Focal TB"]},{"k":false,"f":false,"n":false,"c":["Residual changes after primary TB"]},{"k":false,"f":false,"n":false,"c":["Symon's foci due to TB of Intrathoracic lymph nodes"]}]},{"t":"select","w":1.0,"en":true,"tag":"138","c":["What about general features of this clinical form of TB?",0,0,{"i":"images/86.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Predominance of exudative stage of inflamation"]},{"k":true,"f":false,"n":false,"c":["Capability for self-healing, asymptomatic"]},{"k":false,"f":false,"n":false,"c":["Capability for progression, lung bleeding"]},{"k":false,"f":false,"n":false,"c":["Capability for cavitation, SSP"]}]},{"t":"select","w":1.0,"en":true,"tag":"139","c":["What is the most typical way of detecting of this form of TB?",0,0,{"i":"images/86.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["By TST"]},{"k":false,"f":false,"n":false,"c":["On the basis of microscopy investigation of sputum"]},{"k":true,"f":false,"n":false,"c":["By fluorography"]},{"k":false,"f":false,"n":false,"c":["By physician on the basis of symptoms"]}]},{"t":"select","w":1.0,"en":true,"tag":"140","c":["Identify a clinical form of TB ...",0,0,{"i":"images/87.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["TB of intrathoracic lymph nodes on the left"]},{"k":false,"f":false,"n":false,"c":["Infiltrative TB of S1-2 of left lung"]},{"k":false,"f":false,"n":false,"c":["Disseminated TB of left lung"]},{"k":true,"f":false,"n":false,"c":["Focal TB in S2 of both lungs"]}]},{"t":"select","w":1.0,"en":true,"tag":"141","c":["What is a stage of this clinical form of TB",0,0,{"i":"images/87.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Stage of infiltration"]},{"k":false,"f":false,"n":false,"c":["Stage of distruction (cavitation)"]},{"k":false,"f":false,"n":false,"c":["Stage of calcification"]},{"k":false,"f":false,"n":false,"c":["Residual changes after TB in past"]}]},{"t":"select","w":1.0,"en":true,"tag":"142","c":["What about most typical clinical symptoms of this clinical form of TB?",0,0,{"i":"images/87.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cough & febrile temperature"]},{"k":true,"f":false,"n":false,"c":["No symptoms"]},{"k":false,"f":false,"n":false,"c":["Hemoptisys "]},{"k":false,"f":false,"n":false,"c":["Dyspnea"]}]},{"t":"select","w":1.0,"en":true,"tag":"143","c":["What is the most typical way of detecting of this form of TB?",0,0,{"i":"images/87.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Diaskintest"]},{"k":false,"f":false,"n":false,"c":["TST"]},{"k":true,"f":false,"n":false,"c":["Fluorography"]},{"k":false,"f":false,"n":false,"c":["Zeihl-Neelsen staining of sputum "]}]},{"t":"select","w":1.0,"en":true,"tag":"144","c":["Identify a clinical form of TB ...",0,0,{"i":"images/88.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Focal TB"]},{"k":false,"f":false,"n":false,"c":["TB of intrathoracic lymph nodes on the left"]},{"k":false,"f":false,"n":false,"c":["Round shape Infiltrate in S6 of left lung"]},{"k":true,"f":false,"n":false,"c":["Tuberculomas in S6 of left lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"145","c":["What is a morphological variant of thisTuberculomas?",0,0,{"i":"images/55.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Solitary"]},{"k":false,"f":false,"n":false,"c":["Conglomerative"]},{"k":false,"f":false,"n":false,"c":["False tuberculomas"]},{"k":false,"f":false,"n":false,"c":["Infiltrative-pneumonic type"]}]},{"t":"select","w":1.0,"en":true,"tag":"146","c":["What is a clinical variant of this Tuberculomas?",0,0,{"i":"images/88.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Stable"]},{"k":true,"f":false,"n":false,"c":["Progressive"]},{"k":false,"f":false,"n":false,"c":["Regressive"]},{"k":false,"f":false,"n":false,"c":["Relapse"]}]},{"t":"select","w":1.0,"en":true,"tag":"147","c":["What is a tactics of treatment of this patient?",0,0,{"i":"images/88.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Supervision"]},{"k":false,"f":false,"n":false,"c":["Antituberculosis Chemotherapy for 6-8 months"]},{"k":true,"f":false,"n":false,"c":["Direction to surgeon after 3-4 mo of treatment"]},{"k":false,"f":false,"n":false,"c":["Collapse therapy"]}]},{"t":"select","w":1.0,"en":true,"tag":"148","c":["Identify a clinical form of TB ...",0,0,{"i":"images/16.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Cancer of S2 on the right"]},{"k":false,"f":false,"n":false,"c":["Cavernous TB of S2 on the right"]},{"k":false,"f":false,"n":false,"c":["Round shape Infiltrative TB"]},{"k":true,"f":false,"n":false,"c":["Tuberculomas of S2 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"149","c":["The most informative evidance of tuberculous etiology of this process is ...",0,0,{"i":"images/16.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Satellite nodules around shadow "]},{"k":false,"f":false,"n":false,"c":["Well-defined border"]},{"k":false,"f":false,"n":false,"c":["Localization in S2"]},{"k":false,"f":false,"n":false,"c":["Road to root"]}]},{"t":"select","w":1.0,"en":true,"tag":"150","c":["What is a morphological variant of this form of TB?",0,0,{"i":"images/16.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Conglomerative"]},{"k":true,"f":false,"n":false,"c":["Solitary"]},{"k":false,"f":false,"n":false,"c":["Infiltrative-pneumonic"]},{"k":false,"f":false,"n":false,"c":["False"]}]},{"t":"select","w":1.0,"en":true,"tag":"151","c":["What is a clinical variant of this form of TB?",0,0,{"i":"images/16.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Stable"]},{"k":false,"f":false,"n":false,"c":["Infiltrative pneumonic"]},{"k":true,"f":false,"n":false,"c":["Progressive"]},{"k":false,"f":false,"n":false,"c":["Regressive"]}]},{"t":"select","w":1.0,"en":true,"tag":"152","c":["What is a tactics of treatment of this patient?",0,0,{"i":"images/16.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Supervision"]},{"k":false,"f":false,"n":false,"c":["Collapse therapy"]},{"k":true,"f":false,"n":false,"c":["Direction to surgeon after 3-4 mo of chemotherapy"]},{"k":false,"f":false,"n":false,"c":["AntiTB Chemotherapy for 6-8 mo"]}]},{"t":"select","w":1.0,"en":true,"tag":"153","c":["Identify a clinical form of TB ...",0,0,{"i":"images/15.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Primary TB complex (Gohn's focus)"]},{"k":false,"f":false,"n":false,"c":["Focal TB in S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["Round shape infiltrate of S2 of right lung"]},{"k":true,"f":false,"n":false,"c":["Tuberculomas in S2 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"154","c":["What is a main evidance of TB etiology in this case?",0,0,{"i":"images/15.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Satellite foci around the shadow"]},{"k":false,"f":false,"n":false,"c":["Round shape"]},{"k":false,"f":false,"n":false,"c":["Localization in S2"]},{"k":false,"f":false,"n":false,"c":["Well-defined border"]}]},{"t":"select","w":1.0,"en":true,"tag":"155","c":["Identify a clinical form of TB ...",0,0,{"i":"images/56.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Round shape infiltrate in S2 of right lung"]},{"k":true,"f":false,"n":false,"c":["Tubeculomas in S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["Cavernous TB in S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["Primary TB complex"]}]},{"t":"select","w":1.0,"en":true,"tag":"156","c":["What is the main method of detection of this form of TB?",0,0,{"i":"images/56.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["By microscopy of sputum"]},{"k":false,"f":false,"n":false,"c":["On the basis of symptoms by physician "]},{"k":true,"f":false,"n":false,"c":["By fluorography"]},{"k":false,"f":false,"n":false,"c":["By TST"]}]},{"t":"select","w":1.0,"en":true,"tag":"157","c":["What is a variant of clinical course of this clinical case?",0,0,{"i":"images/56.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Relapse"]},{"k":false,"f":false,"n":false,"c":["Regressive"]},{"k":true,"f":false,"n":false,"c":["Progressive"]},{"k":false,"f":false,"n":false,"c":["Stable"]}]},{"t":"select","w":1.0,"en":true,"tag":"158","c":["What a clinical course is most typical for patients with this form of TB?",0,0,{"i":"images/15.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Relapse"]},{"k":false,"f":false,"n":false,"c":["Regressive"]},{"k":false,"f":false,"n":false,"c":["Progressive"]},{"k":true,"f":false,"n":false,"c":["Stable"]}]},{"t":"select","w":1.0,"en":true,"tag":"159","c":["How often cavity is usually identified in this clinical form of TB?",0,0,{"i":"images/56.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["10-15%"]},{"k":false,"f":false,"n":false,"c":["60-70%"]},{"k":false,"f":false,"n":false,"c":[">90%"]},{"k":false,"f":false,"n":false,"c":["40-50%"]}]},{"t":"select","w":1.0,"en":true,"tag":"160","c":["What is a clinical form of TB?",0,0,{"i":"images/89.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Round shape infiltrative TB"]},{"k":true,"f":false,"n":false,"c":["Tuberculomas in S1, S2 of right lung"]},{"k":false,"f":false,"n":false,"c":["Cavernous TB"]},{"k":false,"f":false,"n":false,"c":["Primary TB complex"]}]},{"t":"select","w":1.0,"en":true,"tag":"161","c":["What is a morphological variant of this form of TB?",0,0,{"i":"images/89.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Single solitary"]},{"k":false,"f":false,"n":false,"c":["Progressive"]},{"k":true,"f":false,"n":false,"c":["Multiple conglomerative"]},{"k":false,"f":false,"n":false,"c":["Multiple solitary"]}]}]},{"title":"Infiltrative TB","q":[{"t":"select","w":1.0,"en":true,"tag":"162","c":["Identify a clinical form of TB ...",0,0,{"i":"images/4.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":true,"f":false,"n":false,"c":["Infiltrative TB in S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas in S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["Disseminated TB on the right"]},{"k":false,"f":false,"n":false,"c":["Primary TB complex"]}]},{"t":"select","w":1.0,"en":true,"tag":"163","c":["What is a stage of this TB process?",0,0,{"i":"images/4.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Stage of resolution"]},{"k":true,"f":false,"n":false,"c":["Stage of cavitation"]},{"k":false,"f":false,"n":false,"c":["Stage of consolidation"]},{"k":false,"f":false,"n":false,"c":["Stage of dissemination"]}]},{"t":"select","w":1.0,"en":true,"tag":"164","c":["In this case of TB a differential diagnosis first of all should be made with ...",0,0,{"i":"images/4.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Silicosis"]},{"k":false,"f":false,"n":false,"c":["Sarcoidosis"]},{"k":true,"f":false,"n":false,"c":["Pneumonia"]},{"k":false,"f":false,"n":false,"c":["Cancer of lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"165","c":["What features are most typical for this clinical form of TB in general?",0,0,{"i":"images/4.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Irreversibility, excretion of 100 ml of sputum daily"]},{"k":false,"f":false,"n":false,"c":["Dyspnea, severe condition "]},{"k":false,"f":false,"n":false,"c":["Self-healing, detecting by fluorigraphy"]},{"k":true,"f":false,"n":false,"c":["Capability for progression, high frequency of CV+, reversibility"]}]},{"t":"select","w":1.0,"en":true,"tag":"166","c":["What is the most possible way for verification of this process?",0,0,{"i":"images/90.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Zeihl-Neelsen staining of sputum"]},{"k":false,"f":false,"n":false,"c":["Antituberculous treatment"]},{"k":false,"f":false,"n":false,"c":["Histopathological examination"]},{"k":false,"f":false,"n":false,"c":["TST, Diaskintest"]}]},{"t":"select","w":1.0,"en":true,"tag":"167","c":["What is a CXR form of this TB process?",0,0,{"i":"images/4.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Lobaitis"]},{"k":true,"f":false,"n":false,"c":["Cloudy Infiltrate"]},{"k":false,"f":false,"n":false,"c":["Infiltrate-cavity"]},{"k":false,"f":false,"n":false,"c":["Round shape Infiltrate "]}]},{"t":"select","w":1.0,"en":true,"tag":"168","c":["Identify a clinical form of TB ...",0,0,{"i":"images/3.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["TB of bronchus"]},{"k":false,"f":false,"n":false,"c":["Primary TB complex"]},{"k":true,"f":false,"n":false,"c":["Infiltrative TB"]},{"k":false,"f":false,"n":false,"c":["Pleurisy"]}]},{"t":"select","w":1.0,"en":true,"tag":"169","c":["What is a CXR form of this TB process?",0,0,{"i":"images/3.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cloud like"]},{"k":false,"f":false,"n":false,"c":["Round shape infiltrate"]},{"k":false,"f":false,"n":false,"c":["Lobitis"]},{"k":true,"f":false,"n":false,"c":["Periscisuritis "]}]},{"t":"select","w":1.0,"en":true,"tag":"170","c":["What features are most typical for this clinical form of TB in general?",0,0,{"i":"images/3.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Reversibility, cavitation "]},{"k":false,"f":false,"n":false,"c":["Irreversibility, calcification"]},{"k":false,"f":false,"n":false,"c":["Self-healing, resolution"]},{"k":false,"f":false,"n":false,"c":["Productive-proliferative inflamation"]}]},{"t":"select","w":1.0,"en":true,"tag":"171","c":["What is the most possible way for verification of this process?",0,0,{"i":"images/3.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Microscopy investigation"]},{"k":true,"f":false,"n":false,"c":["Responce to treatment"]},{"k":false,"f":false,"n":false,"c":["Culture method"]},{"k":false,"f":false,"n":false,"c":["Biopsy"]}]},{"t":"select","w":1.0,"en":true,"tag":"172","c":["What is a CXR form of this TB process?",0,0,{"i":"images/26.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Periscisuritis "]},{"k":false,"f":false,"n":false,"c":["Cloud like"]},{"k":true,"f":false,"n":false,"c":["TB of a whole lung"]},{"k":false,"f":false,"n":false,"c":["Lobitis"]}]},{"t":"select","w":1.0,"en":true,"tag":"174","c":["What a clinical picture is most typical for this CXR form of TB?",0,0,{"i":"images/26.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Fever, cough, weigh loss"]},{"k":false,"f":false,"n":false,"c":["No symptoms"]},{"k":false,"f":false,"n":false,"c":["Gradual onset"]},{"k":false,"f":false,"n":false,"c":["Dyspnea, severe general condition "]}]},{"t":"select","w":1.0,"en":true,"tag":"173","c":["What is a CXR form of this TB process?",0,0,{"i":"images/47.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Assman's infiltrate"]},{"k":false,"f":false,"n":false,"c":["Infiltrate-cavity"]},{"k":false,"f":false,"n":false,"c":["Periscisuritis "]},{"k":true,"f":false,"n":false,"c":["Lobitis"]}]},{"t":"select","w":1.0,"en":true,"tag":"175","c":["What is a CXR form of this TB process?",0,0,{"i":"images/6.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cloud like"]},{"k":true,"f":false,"n":false,"c":["Infiltrate-cavity"]},{"k":false,"f":false,"n":false,"c":["Lobitis"]},{"k":false,"f":false,"n":false,"c":["Broncho-lobular"]}]},{"t":"select","w":1.0,"en":true,"tag":"181","c":["What is a stage of this TB process?",0,0,{"i":"images/6.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Consolidation"]},{"k":false,"f":false,"n":false,"c":["Calcification"]},{"k":false,"f":false,"n":false,"c":["Resolution"]},{"k":true,"f":false,"n":false,"c":["Destruction"]}]},{"t":"select","w":1.0,"en":true,"tag":"182","c":["What is the most possible way for verification of this process?",0,0,{"i":"images/6.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Clinical estimation"]},{"k":false,"f":false,"n":false,"c":["Histology"]},{"k":false,"f":false,"n":false,"c":["AntiTb treatment"]},{"k":true,"f":false,"n":false,"c":["Ziehl_neelsen staining"]}]},{"t":"select","w":1.0,"en":true,"tag":"183","c":["What clinical symptoms are most typical for this CXR form of TB?",0,0,{"i":"images/6.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Subacute onset, hemoptysis "]},{"k":false,"f":false,"n":false,"c":["Dyspnea"]},{"k":false,"f":false,"n":false,"c":["Expectoration of >100 ml of sputum daily "]},{"k":false,"f":false,"n":false,"c":["Severe condition"]}]},{"t":"select","w":1.0,"en":true,"tag":"178","c":["What a clinical picture is most typical for this CXR form of TB?",0,0,{"i":"images/91.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["No symptoms"]},{"k":false,"f":false,"n":false,"c":["Dyspnea"]},{"k":false,"f":false,"n":false,"c":["Hemoptysis"]},{"k":false,"f":false,"n":false,"c":["Severe condition"]}]},{"t":"select","w":1.0,"en":true,"tag":"176","c":["What is a CXR form of this TB process?",0,0,{"i":"images/91.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cloud-like infiltrate"]},{"k":false,"f":false,"n":false,"c":["Lobitis"]},{"k":true,"f":false,"n":false,"c":["Broncho-lobular infiltrate"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas"]}]},{"t":"select","w":1.0,"en":true,"tag":"179","c":["What is the most possible way for verification of this process?",0,0,{"i":"images/91.jpg"},0,0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Microscopy investigation of sputum"]},{"k":true,"f":false,"n":false,"c":["Responce to antiTB treatment"]},{"k":false,"f":false,"n":false,"c":["PCR"]},{"k":false,"f":false,"n":false,"c":["Biopsy"]}]},{"t":"select","w":1.0,"en":true,"tag":"177","c":["What is a CXR form of this TB process?",0,0,{"i":"images/7.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Primary affect"]},{"k":false,"f":false,"n":false,"c":["Cloud like infiltrate"]},{"k":false,"f":false,"n":false,"c":["Lobitis"]},{"k":true,"f":false,"n":false,"c":["Round shape infiltrate"]}]},{"t":"select","w":1.0,"en":true,"tag":"184","c":["What is a name of this lesion ?",0,0,{"i":"images/7.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Assman's infiltrate"]},{"k":false,"f":false,"n":false,"c":["Gohn's focus"]},{"k":false,"f":false,"n":false,"c":["Symon's focus"]},{"k":false,"f":false,"n":false,"c":["Abriciosov's focus"]}]},{"t":"select","w":1.0,"en":true,"tag":"185","c":["With what clinical form of TB it's necessary to make differential diagnosis?",0,"Age - 32 years",0,0,{"i":"images/7.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Primary affect"]},{"k":true,"f":false,"n":false,"c":["Tuberculomas of lung"]},{"k":false,"f":false,"n":false,"c":["Cavernous TB"]},{"k":false,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes"]}]},{"t":"select","w":1.0,"en":true,"tag":"186","c":["What is the most possible clinical form of this New case of TB? ",0,0,{"i":"images/68.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Caseous pneumonia"]},{"k":false,"f":false,"n":false,"c":["Fibrous cavernous TB"]},{"k":false,"f":false,"n":false,"c":["Cavernous TB"]},{"k":true,"f":false,"n":false,"c":["Infiltrative TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"180","c":["What is the most possible way for verification of this process?",0,0,{"i":"images/68.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Responce to treatment"]},{"k":false,"f":false,"n":false,"c":["Biopsy"]},{"k":true,"f":false,"n":false,"c":["Ziehl-Neelsen staining of sputum"]},{"k":false,"f":false,"n":false,"c":["BACTEC"]}]},{"t":"select","w":1.0,"en":true,"tag":"187","c":["What is a stage of this tuberculosis process? ",0,"(2 weeks after detecting)",0,0,{"i":"images/68.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Destrucion, bronchogenic disseimation"]},{"k":false,"f":false,"n":false,"c":["Infiltration"]},{"k":false,"f":false,"n":false,"c":["Resolution"]},{"k":false,"f":false,"n":false,"c":["Consolidation"]}]},{"t":"select","w":1.0,"en":true,"tag":"188","c":["What type of iflamation dominates in this TB process?",0,0,{"i":"images/68.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Exudation"]},{"k":true,"f":false,"n":false,"c":["Destruction"]},{"k":false,"f":false,"n":false,"c":["Productive-proliferative"]},{"k":false,"f":false,"n":false,"c":["Resolution"]}]},{"t":"select","w":1.0,"en":true,"tag":"189","c":["What is a CXR form of this TB process?",0,0,{"i":"images/46.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Broncho-lobular infiltrate"]},{"k":false,"f":false,"n":false,"c":["Round shape infiltrate"]},{"k":true,"f":false,"n":false,"c":["Periscissuratis"]},{"k":false,"f":false,"n":false,"c":["Cloudy infiltrate"]}]},{"t":"select","w":1.0,"en":true,"tag":"190","c":["What is a location of this process?",0,0,{"i":"images/46.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["S4 of right lung"]},{"k":false,"f":false,"n":false,"c":["S3 of right lung"]},{"k":false,"f":false,"n":false,"c":["S6 of right lung"]},{"k":true,"f":false,"n":false,"c":["S2 of right lung"]}]},{"t":"select","w":1.0,"en":true,"tag":"191","c":["What is a stage of this TB process?",0,"(2 weeks after detection)",0,0,{"i":"images/46.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Infiltration"]},{"k":false,"f":false,"n":false,"c":["Consolidation"]},{"k":false,"f":false,"n":false,"c":["Destruction"]},{"k":false,"f":false,"n":false,"c":["Bronchogenic dissemination"]}]},{"t":"select","w":1.0,"en":true,"tag":"192","c":["What is a CXR form of this TB process?",0,0,{"i":"images/5.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Infiltrate-cavity"]},{"k":true,"f":false,"n":false,"c":["Cloudy infiltrate"]},{"k":false,"f":false,"n":false,"c":["Round shape infiltrate"]},{"k":false,"f":false,"n":false,"c":["Lobitis"]}]},{"t":"select","w":1.0,"en":true,"tag":"193","c":["What is a stage of this TB process?",0,0,{"i":"images/5.jpg"},0,0],"ch":[{"k":false,"f":false,"n":false,"c":["Infiltration"]},{"k":false,"f":false,"n":false,"c":["Destruction "]},{"k":true,"f":false,"n":false,"c":["All mentioned "]},{"k":false,"f":false,"n":false,"c":["Bronchogenic dissemination"]}]},{"t":"select","w":1.0,"en":true,"tag":"194","c":["What is a clinical form of TB?",0,0,{"i":"images/5.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Primary TB complex"]},{"k":false,"f":false,"n":false,"c":["Fibrous-cavernous TB"]},{"k":false,"f":false,"n":false,"c":["Pleurisy"]},{"k":true,"f":false,"n":false,"c":["Infiltrative TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"195","c":["What are the most typical features of this form of TB in general?",0,0,{"i":"images/5.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Progression, exudation, SSP "]},{"k":false,"f":false,"n":false,"c":["Capability for self-healing, productive-proliferative type of inflamation"]},{"k":false,"f":false,"n":false,"c":["Domination of caseous process, severe course"]},{"k":false,"f":false,"n":false,"c":["Calcification, primary infection"]}]},{"t":"select","w":1.0,"en":true,"tag":"196","c":["What is a frequency of this clinical form of TB within new cases?",0,0,{"i":"images/5.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["20-30%"]},{"k":true,"f":false,"n":false,"c":["60-70%"]},{"k":false,"f":false,"n":false,"c":["3-4%"]},{"k":false,"f":false,"n":false,"c":["10-15%"]}]},{"t":"select","w":1.0,"en":true,"tag":"197","c":["What is a CXR form of this TB process? ",0,"(New case of TB)",0,0,{"i":"images/69.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cloudy infiltrate"]},{"k":false,"f":false,"n":false,"c":["Assman's infiltrate"]},{"k":true,"f":false,"n":false,"c":["Infiltrate-cavity"]},{"k":false,"f":false,"n":false,"c":["Round shape infiltrate"]}]},{"t":"select","w":1.0,"en":true,"tag":"198","c":["What is a clinical form of TB? (new case)",0,0,{"i":"images/69.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Focal TB"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas"]},{"k":false,"f":false,"n":false,"c":["Cavernous TB"]},{"k":true,"f":false,"n":false,"c":["Infiltrative TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"199","c":["What is a stage of this TB process?",0,0,{"i":"images/69.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Destruction"]},{"k":false,"f":false,"n":false,"c":["Infiltration"]},{"k":false,"f":false,"n":false,"c":["Bronchogenic dissemination"]},{"k":false,"f":false,"n":false,"c":["Resolution"]}]},{"t":"select","w":1.0,"en":true,"tag":"200","c":["What are the most typical features of this form of TB in general?",0,0,{"i":"images/69.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Progression, cavitation, severe course"]},{"k":true,"f":false,"n":false,"c":["Progression, exudation, gradual onset"]},{"k":false,"f":false,"n":false,"c":["Self-healing, rpoductive proliferative inflamation "]},{"k":false,"f":false,"n":false,"c":["Calcification, primary infection"]}]},{"t":"classify","w":3.0,"en":true,"tag":"205","c":["What is the most typical for Infiltrative TB and what - for Caseous pneumonia?"],"cats":[{"c":["Infiltrative TB"],"it":[["Subacute onset"],["Asymptomatic onset"],["Domination of exudative stage of inflamation"],["Satisfactory general condition"],["Frequency 60-70% in new cases of TB"],["Single cavity or a few cavities "],["Positive TST"],["Dry cough"]]},{"c":["Caseous pneumonia"],"it":[["Domination of cavitaion "],["Severe general condition"],["Frequency <1% in new cases of TB"],["Giant cavity or system of cavities"],["Negative TST"],["Lung bleeding"],["Hemoptysis "],["Expectoration > 100 ml of sputum dailly "],["Apneumatosis "]]}]},{"t":"classify","w":2.0,"en":true,"tag":"206","c":["What are the Classical CXR forms of Infiltrative TB?"],"cats":[{"c":["Classical"],"it":[["Round shape Infliltrate"],["Cloudy Infiltrate"],["Broncho-lobular"],["Periscissuratis"],["Lobitis"]]},{"c":["Non classical"],"it":[["Infiltrate-cavity"],["Multifocal Infiltrate"],["Infiltrate of the whole lung"],["Infiltrate of both lungs"],["Infiltrate-tumor"]]}]},{"t":"classify","w":3.0,"en":true,"tag":"207","c":["What is most typical for Infiltrative TB and what - for Pneumonia?"],"cats":[{"c":["Infiltrative TB"],"it":[["Asymptomatic or subacute onset"],["Satisfactory general condition"],["Stable condition"],["Abscent of respiratory noises "],["Location in apex"],["Pleural effusion <10%"],["Good response to Rifampicin, fluoroquinolones "],["Diaskintest (+)"],["SSP"]]},{"c":["Pneumonia"],"it":[["Acut onset"],["Progression"],["Severe condition"],["Crepitation in lung"],["Location in bottom"],["Pleural effusion 30-40%"],["Good response to broad spectrum antibiotics "],["Diaskintest (-)"],["SSN"]]}]},{"t":"select","w":1.0,"en":true,"tag":"227","c":["What is a clinical form of TB?",0,0,{"i":"images/36.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Caseous pneumonia"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas on the right"]},{"k":true,"f":false,"n":false,"c":["Infiltrative TB in S6 of right lung"]},{"k":false,"f":false,"n":false,"c":["Pleurisy"]}]},{"t":"select","w":1.0,"en":true,"tag":"228","c":["What is a CXR form of TB process?",0,0,{"i":"images/36.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Lobatis"]},{"k":false,"f":false,"n":false,"c":["Periscissuratis"]},{"k":false,"f":false,"n":false,"c":["Round shape Infiltrate"]},{"k":true,"f":false,"n":false,"c":["Cloudy Infiltrate"]}]},{"t":"select","w":1.0,"en":true,"tag":"229","c":["What is a CXR form of TB process?",0,0,{"i":"images/48.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Lobatis"]},{"k":false,"f":false,"n":false,"c":["Round shape Infiltrate"]},{"k":false,"f":false,"n":false,"c":["Periscissuritis "]},{"k":false,"f":false,"n":false,"c":["Cloudy Infiltrate"]}]},{"t":"select","w":1.0,"en":true,"tag":"230","c":["What is a clinical form of TB?",0,0,{"i":"images/48.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Disseminated TB"]},{"k":true,"f":false,"n":false,"c":["Infiltrative TB on the left"]},{"k":false,"f":false,"n":false,"c":["Pleurisy"]},{"k":false,"f":false,"n":false,"c":["Fibrous-cavernous TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"231","c":["What is a clinical form of TB?",0,0,{"i":"images/92.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cavernous TB of S3 on the right"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas of S2 on the right"]},{"k":true,"f":false,"n":false,"c":["Infiltrative TB of S2 on the right"]},{"k":false,"f":false,"n":false,"c":["Primary TB complex"]}]},{"t":"select","w":1.0,"en":true,"tag":"232","c":["What is a CXR form of TB process?",0,0,{"i":"images/92.jpg"},0],"ch":[{"k":false,"f":false,"n":false,"c":["Periscissuritis"]},{"k":false,"f":false,"n":false,"c":["Lobitis"]},{"k":false,"f":false,"n":false,"c":["Infiltrate-cavity"]},{"k":true,"f":false,"n":false,"c":["Round shape Infiltrate"]}]},{"t":"select","w":1.0,"en":true,"tag":"233","c":["What is a CXR form of TB process?",0,0,{"i":"images/93.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Lobitis"]},{"k":false,"f":false,"n":false,"c":["Infiltrative TB of right lung"]},{"k":false,"f":false,"n":false,"c":["Periscissuritis"]},{"k":false,"f":false,"n":false,"c":["Cloudy Infiltrate"]}]},{"t":"select","w":1.0,"en":true,"tag":"234","c":["What is a clinical form of TB?",0,0,{"i":"images/93.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Pleurisy on the right"]},{"k":true,"f":false,"n":false,"c":["Infiltrative TB of upper lobe of right lung"]},{"k":false,"f":false,"n":false,"c":["Tuberculomas on the right"]},{"k":false,"f":false,"n":false,"c":["Primary TB complex"]}]},{"t":"select","w":1.0,"en":true,"tag":"235","c":["What is a clinical form of TB?",0,0,{"i":"images/94.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cavernous TB of S1-2 on the right"]},{"k":false,"f":false,"n":false,"c":["Primary TB on the right"]},{"k":true,"f":false,"n":false,"c":["Infiltrative TB of S1-2 on the right"]},{"k":false,"f":false,"n":false,"c":["Fibrous-cavernous TB of S1-2 on the right"]}]},{"t":"select","w":1.0,"en":true,"tag":"236","c":["What is a stage of this TB process?",0,0,{"i":"images/94.jpg"},0,0],"ch":[{"k":false,"f":false,"n":false,"c":["Bronchogenic dissemination"]},{"k":false,"f":false,"n":false,"c":["Infiltration"]},{"k":false,"f":false,"n":false,"c":["Cavitation"]},{"k":true,"f":false,"n":false,"c":["All mentioned"]}]},{"t":"select","w":1.0,"en":true,"tag":"237","c":["What is most typical Dx feature of TB here?",0,0,{"i":"images/94.jpg"},0,0],"ch":[{"k":true,"f":false,"n":false,"c":["Cavities, bronchogenic dissemination"]},{"k":false,"f":false,"n":false,"c":["Location in S1-2"]},{"k":false,"f":false,"n":false,"c":["Heterogeneous consolidation "]},{"k":false,"f":false,"n":false,"c":["Connection to hilar "]}]}]},{"title":"Disseminated TB","q":[{"t":"classify","w":3.0,"en":true,"tag":"240","c":["What is typical for Miliary, what - for Disseminated TB?"],"cats":[{"c":["Miliary TB"],"it":[["Final location of nodules - capillaries "],["Size of nodules - 1-2 mm"],["Preferential location in the lung - all parts "],["Cavitation - not typical"],["Clinical onset -  acute"],["A possible complication - meningeal syndrome"]]},{"c":["Disseminated TB"],"it":[["Final location of nodules - venules"],["Size of nodules - 3-10 mm"],["Preferential location in the lung - upper, medial"],["Clinical onset -  gradual"],["Cavitation - typical"],["A possible complication - pleurisy"]]}]},{"t":"select","w":1.0,"en":true,"tag":"241","c":["What is a possible clinical form of TB?",0,{"i":"images/95.png"}],"ch":[{"k":false,"f":false,"n":false,"c":["Disseminated TB"]},{"k":true,"f":false,"n":false,"c":["Miliary TB"]},{"k":false,"f":false,"n":false,"c":["Sarcoidosis"]},{"k":false,"f":false,"n":false,"c":["Infitrative TV"]},{"k":false,"f":false,"n":false,"c":["Focal TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"242","c":["What clinical presentation is typical for this form of TB? ",0,{"i":"images/95.png"}],"ch":[{"k":true,"f":false,"n":false,"c":["Acute onset, fever, fatigue"]},{"k":false,"f":false,"n":false,"c":["Gradual onset, hemoptysis"]},{"k":false,"f":false,"n":false,"c":["Asymptomatic onset, selfhealing"]},{"k":false,"f":false,"n":false,"c":["Gradual onset, loose of weight"]}]},{"t":"select","w":1.0,"en":true,"tag":"243","c":["What is a stage of TB?",0,{"i":"images/95.png"}],"ch":[{"k":true,"f":false,"n":false,"c":["Infiltration"]},{"k":false,"f":false,"n":false,"c":["Cavitation"]},{"k":false,"f":false,"n":false,"c":["Calcification"]},{"k":false,"f":false,"n":false,"c":["Resolution"]}]},{"t":"select","w":1.0,"en":true,"tag":"248","c":["What is the most important for the diagnosis of pathomorphological type of this TB process on CXR? (choose 2 options)",0,{"i":"images/95.png"}],"ch":[{"k":true,"f":false,"n":false,"c":["Size of nodules"]},{"k":false,"f":false,"n":false,"c":["No changes in roots"]},{"k":false,"f":false,"n":false,"c":["Cavitation"]},{"k":true,"f":false,"n":false,"c":["Symmetric location of nodules"]}]},{"t":"select","w":1.0,"en":true,"tag":"244","c":["What is a possible clinical form of TB?",0,{"i":"images/96.png"}],"ch":[{"k":true,"f":false,"n":false,"c":["Chronic Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Miliary TB"]},{"k":false,"f":false,"n":false,"c":["Subacute disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Both sides Focal TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"245","c":["What clinical presentation is typical for this form of TB? ",0,{"i":"images/96.png"}],"ch":[{"k":true,"f":false,"n":false,"c":["Undulating clinical course"]},{"k":false,"f":false,"n":false,"c":["Acute onset, fever, fatigue"]},{"k":false,"f":false,"n":false,"c":["Asymptomatic onset"]},{"k":false,"f":false,"n":false,"c":["Meningeal syndrome"]},{"k":false,"f":false,"n":false,"c":[]}]},{"t":"select","w":1.0,"en":true,"tag":"246","c":["What is a stage of TB?",0,{"i":"images/96.png"}],"ch":[{"k":true,"f":false,"n":false,"c":["Calcification"]},{"k":false,"f":false,"n":false,"c":["Cavitation"]},{"k":false,"f":false,"n":false,"c":["Resolution"]},{"k":false,"f":false,"n":false,"c":["Infiltration"]}]},{"t":"select","w":2.0,"en":true,"tag":"247","c":["What is the most important for the diagnosis of pathomorphological type of this TB process on CXR? ((choose 2 options))",0,{"i":"images/96.png"}],"ch":[{"k":true,"f":false,"n":false,"c":["Polymorphic character of the nodules"]},{"k":false,"f":false,"n":false,"c":["No changes in both root"]},{"k":true,"f":false,"n":false,"c":["Location in upper level"]},{"k":false,"f":false,"n":false,"c":["Well defined borders of nodules"]}]},{"t":"select","w":1.0,"en":true,"tag":"249","c":["What is a possible clinical form of TB?",0,{"i":"images/97.png"}],"ch":[{"k":false,"f":false,"n":false,"c":["Miliary TB"]},{"k":true,"f":false,"n":false,"c":["Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Chronic disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Focal TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"250","c":["What clinical presentation is typical for this form of TB? ",0,{"i":"images/97.png"}],"ch":[{"k":true,"f":false,"n":false,"c":["Acute onset, fever, hemoptysis"]},{"k":false,"f":false,"n":false,"c":["Subacute onset, fever, loss of voice"]},{"k":false,"f":false,"n":false,"c":["Headache, meningeal syndorme"]},{"k":false,"f":false,"n":false,"c":["Asymptomatic onset, self-healing"]}]},{"t":"select","w":1.0,"en":true,"tag":"251","c":["What is the most important for the diagnosis of pathomorphological type of this TB process on CXR? (choose 2 options)",0,{"i":"images/97.png"},0],"ch":[{"k":true,"f":false,"n":false,"c":["Upper and medial level location in lungs"]},{"k":true,"f":false,"n":false,"c":["Size of nodules > 1-2 mm"]},{"k":false,"f":false,"n":false,"c":["Cavitation in both apex"]},{"k":false,"f":false,"n":false,"c":["Symmetric position of nodules"]}]},{"t":"select","w":1.0,"en":true,"tag":"252","c":["What is a possible clinical form of TB?",0,{"i":"images/21.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Bronchogenic Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Hematogenic Miliary TB"]},{"k":false,"f":false,"n":false,"c":["Hematogenic Disseminated TB"]},{"k":true,"f":false,"n":false,"c":["Lymphogenic Disseminated TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"253","c":["What is the most important for the diagnosis of pathomorphological type of this TB process on CXR? ((choose 2 options))",0,{"i":"images/21.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Subcortical location of nodules"]},{"k":true,"f":false,"n":false,"c":["High density of nodules"]},{"k":false,"f":false,"n":false,"c":["Upper and medial level location"]},{"k":false,"f":false,"n":false,"c":["One side changes in root"]}]},{"t":"select","w":1.0,"en":true,"tag":"254","c":["What is a possible clinical form of TB?",0,{"i":"images/31.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Acute Miliary TB"]},{"k":false,"f":false,"n":false,"c":["Subacute Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Bronchogenic Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Lymphogenic Disseminated TB"]}]},{"t":"select","w":2.0,"en":true,"tag":"256","c":["What is the most important for the diagnosis of pathomorphological type of this TB process on CXR? ((choose 3 options))",0,{"i":"images/31.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Big size of nodules"]},{"k":true,"f":false,"n":false,"c":["Cavitation"]},{"k":false,"f":false,"n":false,"c":["Symmetric position of nodules"]},{"k":true,"f":false,"n":false,"c":["Predominant location in upper and medial level"]}]},{"t":"select","w":1.0,"en":true,"tag":"257","c":["What is a stage of TB (choose 2 options)?",0,{"i":"images/31.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Cavitation"]},{"k":false,"f":false,"n":false,"c":["Resolution"]},{"k":false,"f":false,"n":false,"c":["Calcification"]},{"k":true,"f":false,"n":false,"c":["Infiltration"]}]},{"t":"select","w":1.0,"en":true,"tag":"255","c":["What is a possible clinical form of TB?",0,{"i":"images/34.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Acute Miliary TB"]},{"k":true,"f":false,"n":false,"c":["Hematogenic Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Bronchogenic Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Lymphogenic Disseminated TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"258","c":["What is the most important for the diagnosis of pathomorphological type of this TB process on CXR? ((choose 3 options))",0,{"i":"images/34.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Big size of nodules"]},{"k":true,"f":false,"n":false,"c":["Location in upper and medial level"]},{"k":false,"f":false,"n":false,"c":["Changes in both root"]},{"k":false,"f":false,"n":false,"c":["High density of nodules"]}]},{"t":"select","w":1.0,"en":true,"tag":"259","c":["What is a stage of TB (choose 2 options)?",0,{"i":"images/34.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Cavitation"]},{"k":false,"f":false,"n":false,"c":["Resolution"]},{"k":false,"f":false,"n":false,"c":["Calcification"]},{"k":true,"f":false,"n":false,"c":["Infiltration"]}]},{"t":"match","w":1.0,"en":true,"tag":"260","c":["What is a final location of nodules?"],"pairs":[[["Miliary TB"],["Capillaries"]],[["Hematogenic Disseminated TB"],["Venules"]],[["Lymphogenic Disseminated TB"],["Visceral pleura"]],[["Bronchogenic Disseminated TB"],["Lung tissue from bronchus"]]]},{"t":"select","w":1.0,"en":true,"tag":"261","c":["What is a possible clinical form of TB?",0,{"i":"images/59.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Miliary TB"]},{"k":false,"f":false,"n":false,"c":["Hematogenic Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Lymphogenic Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Bronchogenic Disseminated TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"262","c":["What is the most important for the diagnosis of pathomorphological type of this TB process on CXR? ((choose 2 options))",0,{"i":"images/59.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Small size of nodules"]},{"k":true,"f":false,"n":false,"c":["Symmetric position of nodules"]},{"k":false,"f":false,"n":false,"c":["Changes in roots"]},{"k":false,"f":false,"n":false,"c":["Cavitation"]}]},{"t":"select","w":1.0,"en":true,"tag":"263","c":["What clinical presentation is typical for this form of TB? ",0,{"i":"images/59.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Undulating clinical course"]},{"k":true,"f":false,"n":false,"c":["Acute onset, fever, dyspnea"]},{"k":false,"f":false,"n":false,"c":["Asymptomatic onset"]},{"k":false,"f":false,"n":false,"c":["Gradual onset, hemoptysis"]},{"k":false,"f":false,"n":false,"c":[]}]},{"t":"classify","w":1.0,"en":true,"tag":"264","c":["What on this CXR tells us about Disseminated TB, what - about Silikosis?",0,{"i":"images/61.jpg"}],"cats":[{"c":["Silicosis"],"it":[["High density of nodules"],["Bote sides calcification in roots"],["Borders of nodules are well defined"],["No Cavitation"]]},{"c":["Miliary TB"],"it":[["Low density of nodules"],["No changes in roots"],["Presence of Cavitation"],["Borders of nodules are ill defined"]]}]},{"t":"select","w":1.0,"en":true,"tag":"265","c":["What is possible diagnosis in this case?",0,{"i":"images/61.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Miliary TB"]},{"k":false,"f":false,"n":false,"c":["Disseminated TB"]},{"k":true,"f":false,"n":false,"c":["Silicosis"]},{"k":false,"f":false,"n":false,"c":["TB of Intrathoracic lymph nodes"]}]},{"t":"select","w":1.0,"en":true,"tag":"266","c":["What is the most important for the diagnosis of this process on CXR? ((choose 2 options))",0,{"i":"images/61.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["High density of nodules"]},{"k":false,"f":false,"n":false,"c":["Cavitation"]},{"k":true,"f":false,"n":false,"c":["Calcification in roots"]},{"k":false,"f":false,"n":false,"c":["Ill defined borders of nodules"]}]}]},{"title":"Caseous pneumonia","q":[{"t":"select","w":1.0,"en":true,"tag":"208","c":["What is a clinical form of TB?",0,0,{"i":"images/53.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Caseous pneumonia (galloping consumption) "]},{"k":false,"f":false,"n":false,"c":["Infiltrative TB"]},{"k":false,"f":false,"n":false,"c":["Fibrous-cavernous TB"]},{"k":false,"f":false,"n":false,"c":["Disseminated TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"209","c":["What is most typical for this clinical form of TB in general?",0,0,{"i":"images/53.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Stable condition, asymptomatic onset, self-healing"]},{"k":true,"f":false,"n":false,"c":["Progression, severe condition, hemoptysis, caseation "]},{"k":false,"f":false,"n":false,"c":["Fast positive dynamics to treatment, predominance of exudation"]},{"k":false,"f":false,"n":false,"c":["Chronic course during years "]}]},{"t":"select","w":1.0,"en":true,"tag":"210","c":["What is most typical for this clinical form of TB changes on CXR ?",0,0,{"i":"images/53.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Bronchogenic dissemination, development of diffuse fibrosis "]},{"k":false,"f":false,"n":false,"c":["Both side heterogeneous consolidation (infiltration)"]},{"k":true,"f":false,"n":false,"c":["Apneumatosis, the system of big cavities "]},{"k":false,"f":false,"n":false,"c":["Both sides dissemination "]}]},{"t":"select","w":1.0,"en":true,"tag":"211","c":["What are the possible outcomes of this clinical form of TB?",0,0,{"i":"images/53.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Formation of chronic disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Self-healing, resolution"]},{"k":false,"f":false,"n":false,"c":["Regression of infiltration, consolidation"]},{"k":true,"f":false,"n":false,"c":["Formation of chronic TB, high level of mortality"]}]},{"t":"select","w":1.0,"en":true,"tag":"212","c":["What is a frequency of this clinical form of TB within New cases ?",0,0,{"i":"images/53.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["~1%"]},{"k":false,"f":false,"n":false,"c":["5-7%"]},{"k":false,"f":false,"n":false,"c":["10-15%"]},{"k":false,"f":false,"n":false,"c":["60-70%"]}]},{"t":"select","w":1.0,"en":true,"tag":"213","c":["What is a main method of verification of this form of TB?",0,0,{"i":"images/53.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Estimation of antiTB chemotherapy"]},{"k":true,"f":false,"n":false,"c":["Ziehl-Neelsen staining "]},{"k":false,"f":false,"n":false,"c":["Estimation of severity of disease "]},{"k":false,"f":false,"n":false,"c":["Histological examenation "]}]},{"t":"select","w":1.0,"en":true,"tag":"214","c":["What is a clinical form of TB?",0,0,{"i":"images/54.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Spontaneous pneumothorax "]},{"k":false,"f":false,"n":false,"c":["Infiltrative TB"]},{"k":true,"f":false,"n":false,"c":["Caseous pneumonia"]},{"k":false,"f":false,"n":false,"c":["Disseminated TB"]}]},{"t":"select","w":1.0,"en":true,"tag":"215","c":["What are the main clinical symptoms of this process?",0,0,{"i":"images/54.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Chills, night sweats "]},{"k":false,"f":false,"n":false,"c":["Asymptomatic onset, good condition"]},{"k":false,"f":false,"n":false,"c":["Subacute onset, dry cough, satisfactory condition"]},{"k":true,"f":false,"n":false,"c":["Severe condition, hemoptysis, dyspnea"]}]},{"t":"select","w":1.0,"en":true,"tag":"216","c":["What is a frequency of this clinical form of TB within New cases ?",0,0,{"i":"images/54.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["~1%"]},{"k":false,"f":false,"n":false,"c":["5-7%"]},{"k":false,"f":false,"n":false,"c":["10-15%"]},{"k":false,"f":false,"n":false,"c":["60-70%"]}]},{"t":"select","w":1.0,"en":true,"tag":"217","c":["What happened with mediastinum in this case?",0,0,{"i":"images/54.jpg"},0,"©Yaushev MF Kazan State Medical University",0,0],"ch":[{"k":false,"f":false,"n":false,"c":["Shifted to another side due to liquid "]},{"k":true,"f":false,"n":false,"c":["Shifted to same side due to apneumatosis "]},{"k":false,"f":false,"n":false,"c":["Nothing"]},{"k":false,"f":false,"n":false,"c":["Collapsed due to pneumathorax"]}]},{"t":"select","w":1.0,"en":true,"tag":"218","c":["What are the possible outcomes of this clinical form of TB?",0,0,{"i":"images/54.jpg"},0,0],"ch":[{"k":false,"f":false,"n":false,"c":["Formation of chronic disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Self-healing, resolution"]},{"k":true,"f":false,"n":false,"c":["Formation of chronic TB, high level of mortality"]},{"k":false,"f":false,"n":false,"c":["Regression of infiltration, consolidatio"]}]},{"t":"select","w":1.0,"en":true,"tag":"219","c":["What is a clinical form of TB?",0,0,{"i":"images/27.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cavernous TB"]},{"k":false,"f":false,"n":false,"c":["Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Infiltrative TB"]},{"k":true,"f":false,"n":false,"c":["Caseous pneumonia"]}]},{"t":"select","w":1.0,"en":true,"tag":"220","c":["What is more typical for this clinical form of TB in general?",0,0,{"i":"images/27.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Progression, severe condition, lung bleeding, dyspnea"]},{"k":false,"f":false,"n":false,"c":["Self-healing, stable condition"]},{"k":false,"f":false,"n":false,"c":["Gradual onset, dry cough, chest pain"]},{"k":false,"f":false,"n":false,"c":["Fibrile temperature, satisfactory condition "]}]},{"t":"select","w":1.0,"en":true,"tag":"221","c":["What are the most typical CXR changes in this case?",0,0,{"i":"images/27.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cavity on the right, dissemination on the left"]},{"k":true,"f":false,"n":false,"c":["Giant cavity on the right, system of cavities on the left"]},{"k":false,"f":false,"n":false,"c":["Both sides infiltration"]},{"k":false,"f":false,"n":false,"c":["Both sides dissemination"]}]},{"t":"select","w":1.0,"en":true,"tag":"222","c":["What stage of inflamation is dominated in this case? ",0,0,{"i":"images/27.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Consolidation"]},{"k":false,"f":false,"n":false,"c":["Exudation"]},{"k":true,"f":false,"n":false,"c":["Destruction"]},{"k":false,"f":false,"n":false,"c":["Productive-proliferative stage"]}]},{"t":"select","w":1.0,"en":true,"tag":"223","c":["What is a clinical form of TB?",0,0,{"i":"images/98.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Cavernous TB"]},{"k":false,"f":false,"n":false,"c":["Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Infiltrative TB"]},{"k":true,"f":false,"n":false,"c":["Caseous pneumonia"]}]},{"t":"select","w":1.0,"en":true,"tag":"224","c":["What are the most typical CXR changes in this case?",0,0,{"i":"images/98.jpg"}],"ch":[{"k":true,"f":false,"n":false,"c":["Ginat cavity on the left, system of cavities on the right"]},{"k":false,"f":false,"n":false,"c":["Both sides consolidation"]},{"k":false,"f":false,"n":false,"c":["Dissemination on the right"]},{"k":false,"f":false,"n":false,"c":["Pneumathorax on the left"]}]},{"t":"select","w":1.0,"en":true,"tag":"225","c":["What stage of inflamation is dominated in this case? ",0,0,{"i":"images/98.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Exudation"]},{"k":true,"f":false,"n":false,"c":["Cavitation"]},{"k":false,"f":false,"n":false,"c":["Consolidation"]},{"k":false,"f":false,"n":false,"c":["Bronchogenic dissemination"]}]},{"t":"select","w":1.0,"en":true,"tag":"226","c":["What are the main clinical symptoms of this process?",0,0,{"i":"images/98.jpg"},0,"©Yaushev MF Kazan State Medical University"],"ch":[{"k":false,"f":false,"n":false,"c":["Dry cough, chest pain, night sweats "]},{"k":false,"f":false,"n":false,"c":["Gradual onset, satisfactory condition"]},{"k":true,"f":false,"n":false,"c":["Dyspnea, hemoptysis, progression, severe condition"]},{"k":false,"f":false,"n":false,"c":["Asymptomatic onset, good general condition "]}]},{"t":"select","w":1.0,"en":true,"tag":"238","c":["What is a clinical form of TB?",0,0,{"i":"images/99.jpg"}],"ch":[{"k":false,"f":false,"n":false,"c":["Pleurisy"]},{"k":false,"f":false,"n":false,"c":["Disseminated TB"]},{"k":false,"f":false,"n":false,"c":["Infiltrative TB"]},{"k":true,"f":false,"n":false,"c":["Caseous pneumonia"]}]},{"t":"select","w":1.0,"en":true,"tag":"239","c":["What the stage of inflamation dominates in this case?",0,0,{"i":"images/99.jpg"},0,0],"ch":[{"k":true,"f":false,"n":false,"c":["Caseation"]},{"k":false,"f":false,"n":false,"c":["Exudation"]},{"k":false,"f":false,"n":false,"c":["Consolidation"]},{"k":false,"f":false,"n":false,"c":["Dissemination"]}]}]}],"profile":{"perSection":6,"shuffleQuestions":true,"shuffleChoices":true,"duration":20,"weightCues":false,"fbTotal":true,"fbAnswer":false,"resPercent":true,"resPoints":false,"resMark":true,"qPercent":true,"qPoints":false,"qCorrect":false,"sPercent":true,"sPoints":true,"sCount":true,"marks":[{"t":"Bad","lb":0.0},{"t":"Stisfactory","lb":0.7},{"t":"Good","lb":0.8},{"t":"Excelent","lb":0.9}]}};
+var I18N = {"en":{"qTitle":"Question","qOf":"of %d","browse":"Browse","submit":"Submit","prev":"Previous","prevHint":"Go to the Previous Question","next":"Next","nextHint":"Go to the Next Question","playerResult":"Result:","timeHint":"Time remaining","finishWork":"Finish Work","confirm":"Confirmation","finishQ":"Do you want to finish the test?","finish":"Finish","notNow":"Not Now","browserTitle":"Question Browser","select":"Select","tabTotal":"Overall Results","tabQuestions":"Questions","tabSections":"Sections","scoreResult":"Result:","grade":"Grade:","offered":"Questions offered:","pointsEarned":"Points earned:","weightRight":"%s of %d","close":"Close","aboutLink":"About this program...","aboutTitle":"About","aboutClose":"Close","colSection":"Section","colResult":"Result, %","colEarned":"Points Earned","colTotal":"Points Total","colCount":"Questions Total","qsResult":"Result:","qsPrevHint":"Go to the Previous Question","qsNextHint":"Go to the Next Question","dec":".","noQuestions":"No questions are available.","yourAnswer":"Your Answer","correctAnswer":"Correct Answer","modeTest":"Test","modePractice":"Practice","descTest":"{n} {q}, {m} {min}, result at the end","descPractice":"{n} {q}, no time limit, correct answers can be shown","qWords":["question","questions"],"minWords":["minute","minutes"]},"ru":{"qTitle":"Вопрос","qOf":"из %d","browse":"Обзор","submit":"Ответить","prev":"Назад","prevHint":"Перейти к предыдущему вопросу","next":"Вперед","nextHint":"Перейти к следующему вопросу","playerResult":"Верно:","timeHint":"Осталось времени","finishWork":"Завершить работу","confirm":"Подтверждение","finishQ":"Завершить работу?","finish":"Завершить","notNow":"Не сейчас","browserTitle":"Обзор вопросов","select":"Выбрать","tabTotal":"Общий итог","tabQuestions":"Вопросы","tabSections":"Разделы","scoreResult":"Итог:","grade":"Оценка:","offered":"Предложено вопросов:","pointsEarned":"Набрано баллов:","weightRight":"%s из %d","close":"Закрыть","aboutLink":"О программе...","aboutTitle":"О программе","aboutClose":"Закрыть","colSection":"Раздел","colResult":"Итог, %","colEarned":"Набрано баллов","colTotal":"Всего баллов","colCount":"Всего вопросов","qsResult":"Оценка ответа:","qsPrevHint":"Перейти к предыдущему вопросу","qsNextHint":"Перейти к следующему вопросу","dec":",","noQuestions":"Тест не содержит доступных для использования вопросов.","yourAnswer":"Ваш ответ","correctAnswer":"Верный ответ","modeTest":"Тест","modePractice":"Тренировка","descTest":"{n} {q}, {m} {min}, результат в конце","descPractice":"{n} {q}, без ограничения времени, можно посмотреть верные ответы","qWords":["вопрос","вопроса","вопросов"],"minWords":["минута","минуты","минут"]},"uk":{"qTitle":"Питання","qOf":"з %d","browse":"Огляд","submit":"Відповісти","prev":"Назад","prevHint":"Повернутися до попереднього питання","next":"Вперед","nextHint":"Перейти до наступного питання","playerResult":"Правильно:","timeHint":"Залишилось часу","finishWork":"Завершити роботу","confirm":"Підтвердження","finishQ":"Завершити роботу?","finish":"Завершити","notNow":"Не зараз","browserTitle":"Огляд питань","select":"Вибрати","tabTotal":"Загальний підсумок","tabQuestions":"Питання","tabSections":"Розділи","scoreResult":"Підсумок:","grade":"Оцінка:","offered":"Запропоновано питань:","pointsEarned":"Набрано балів:","weightRight":"%s з %d","close":"Закрити","aboutLink":"Про програму...","aboutTitle":"Про програму","aboutClose":"Закрити","colSection":"Розділ","colResult":"Підсумок, %","colEarned":"Набрано балів","colTotal":"Всього балів","colCount":"Всього питань","qsResult":"Оцінка відповіді:","qsPrevHint":"Повернутися до попереднього питання","qsNextHint":"Перейти до наступного питання","dec":",","noQuestions":"Немає доступних питань.","yourAnswer":"Ваша відповідь","correctAnswer":"Правильна відповідь","modeTest":"Тест","modePractice":"Тренування","descTest":"{n} {q}, {m} {min}, результат наприкінці","descPractice":"{n} {q}, без обмеження часу, можна переглянути правильні відповіді","qWords":["питання","питання","питань"],"minWords":["хвилина","хвилини","хвилин"]}};
+var ICONS = {"back":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAb1JREFUeNqkUz1LI1EUPTPzRoMa0WgiCDYKi4JWz0oQbcVttZCIhR8BQZjScv+AIqtYWqVV7BTBX6BT7PpRhK1iIWIRJ5rMzJsv3xszo5i4Frnw5sKde86997z7pCAI0IwR8Rn5dYGWRAJqa2t4iKqCEJLlvyZ5gVyU/PT4GANF4T+bY28EDSzruq72MWA+PzdMlOsiQZB1HUdbnO2n3EOcarkc+i9H+Ah2GNNW539Qw/Dg2DZ814Xv+//XoDZTCM4tjNJCoYKuLjUk4HbZCMjzde5yJAbbtra+ROnVlVFL8PFzaoiKSxKCRZclvKpKODy9ee9AgDdWJuj1tRFXKBkWivcmqqYJh8/veV4YVxQFvT0dYJb1LqJjWTtbu+f64GAHqn6A2xcbBZuh3NYCluqEl+6B35eGm0nDTKXwQBJgnDjugLeYF/Nu/z7Rppdn6N+ig4GkjH9HZ/pX4kmSpH8WMc9FxNn+sTa8NkeLVYBxUoWQcZ5cf/+yXL8HgsRlbOdmN6+3K6E2sCoV+LX5v9+DiISLdrd3EG+i6Kw9mYTCV/xbgojE4wsk3kIUK5dK6M5k6rVo9jXKaNJeBRgAr5/l039biuYAAAAASUVORK5CYII=","advance":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAa9JREFUeNqkU79Lw0AU/lLTqIViHURw6KK4KhwObk4idnDSQbo4ufZPcHR0ESyIIMZJEQdx6OLgJFgHBQUVB7da2mr6K8ldLt5da4y1gtAPXt69y73v/brTfN9HL9DlZ2rzDpqmBZuJkZFgLfazQl0yxkxGKajjKHFtGw8bMy2CTtTe3zEYj3+ZpC0SZufZSDcCGalhWUpLSS+OEaEz8P30vwgkPMbg1Osq3Y8PD+lUklDX/UWiShCNzIbS/CbxPCW2zVAoMKymxsn+yX2m3XgzIBBRyNrKNKnVGOS/r8m01kCl4goSD09PFMsLk+Tw9DYgUQSyo5ZFUSw6QXRXlFBtNNFoNkFFH2QmEs+vfZibTZLcxWPmm0AcMowIEgkDlPt4synKnIPFDPDBKCwRveZwRTAxGsPZ+U1ejHcrXEJ+O5v787IMLc2TQoNjYiiCq+Occo7295vhJq5zzn85yjrFNK5L+gASw8DLwVHL2TDMH1PoBi5qdkRpEnFxSUu7pnLWQ85/EniiafVqNbDLO3st52jU7PoWOmFVKmEzL99Cn66b3c5qvb7GCHrEpwADAFa055IUHoYRAAAAAElFTkSuQmCC","time":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAlZJREFUeNqkU0tLG1EUvjORFJPMw6mhTUgxy75EUxiJj6CGLKQV0o2IQd3pxp2bbPs/3MVCIHSRgC3uXBhCSErjtLRkK7TcNCYhk4eGPHvO6AwjXXrgu/fOOff77plzz2VGoxF5iI3hEA6HCcuyxGKxEIZhOMBLcHsAwt0+FfAbDvsFaA4GAzIcDkkqlboVMNlzB8+vzgUCq3N+v+xyOl3opFdXNJfN5nPn52dNVT0DV/FeBjpZcjrfR/b3Dzwul0e02ciPiwsyPTtLptxur7C25n0xMzMfPzoSypQmdREWB0iLt3NcKLK3dzAhSR5+fFxT/JbPG+row9g2HABZhpBjCMA/vZYDgRVOFD02q5WwDKOROp2OIYA+jDlgz8Ly8gpyDIF+v++d9vlkXDdubshlpaKhWCwaawTGsHg+WZaRY9QAPiYEUXyinzY1OanNzWbTWGv7gPynViO4FzlmARavcWgivw2FSDAYJDubm4TjOA0Oh4O8WVwk80tLGscsoLZUtWwThGf6afFEgmxvbZGP8biRAbac2u2S60ajjByjBr1e7/JrJqOMQSNhmmiCJGlknHVAAckjuI1cOq0gx3wLyudkMt1ttejgTkAXMRsWkO106KdEIo0cQwAC9b+l0umHaPRYrVaphWX/63n0XasqjR4eHlNKT5FzrxPBoXxXFEtkY6Ozs7u78G59/dVTt/sxdkSJ0uqXk5OfsVgsU6lUUjzPKzqPwdfo8/lIF4pTr9dJu92WID0/tjZAv8MKti48tqzdbq+JUAsrNFWhULgVeIj9E2AAamUckFr2UCoAAAAASUVORK5CYII=","correct":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAipJREFUeNp8U01oE0EY/XazSWiqptUWpRbBoD1pq4hYsAp66BZ6EyqCYk7iSUEoIpjiwRbaHj1pRPAk0QQP/lFIsam/ELWxMSXoYS3ExtgkJc0mZn9md5wpXcloth88Zuf73nu8md3lMMZg1VRAAJcDOJ6HfWTbR9CxPsoSvDFNSGkG4IFR9FcjAFscMmGwZUfX0J7eoT7s9vq0mgxYKUo/Pk/1lnJSmHCeE+CGBqqOu7ft3HvmwODw2U+xUPr713jUMBF0dO7qPHLs1PnEy7Bj5edihlDnLQ1fb6BocLK7/4KYjIckaSkaAe+q39Fa9efK6Uhq/om0/+iASDn1GibBbw12b97S3pYtfsgIHhBJS7RmvyqLq4eaBB/l2BuoWFY1RRH7Jw8aCEGplIeqXASPC8EmNwZN0xXKqdewR9Dh3dzb6IJJxGq5DCu5LOSXJJALGTCQCnMfkwuUY5uAXOL0zLOIr7C8rPYcPt7l9jS3NSEv6IAKsVj8WzqZCnEcTNsmoB6GCbcT718F7t8anW1uaQXB6YLHDx7OfkmkAnRGORsZ0NIJZgicdONwri3O9Z7+L5k5go7+n4XvBV+QZcRqkq8RbBPQr7oOHO2du3T1BHkepz0qRsYGCWo1Zrb2uoITk0/JMmZiaFhMgrLMQKG9yzdGTssyDFcqABZsE1SrzMxNf8trF28+EgS4y/ONEzAG27dykM1j6z6CV/zX24nwDjF4DTb1R4ABAGdp/sjY8GhoAAAAAElFTkSuQmCC","user":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAk5JREFUeNqUU89rE1EQnrc2qbukhSARmxXaCCbFtZL4o7W2EupBciikhCKiCL31VEp7Fyn+B3rSQ29CkUJpQRGkIlaWHFJ7McWUolSaRiHpQi1JNtvuc+Y1rpvUiwPDm/fNN997b3aWcc5BlSRoMoUB3MV1sL7/yAHmcC27SXnbhhb4tz2IaNp438BAd82yIL2yEv22uelB/FkzURxtH/fh08GgtmsYcrFYlP2BgEZYM49M3CB+/q8iw7u/y/HQ9NgN78Vwh8A+bxS8w7oeuhVhgC9uMCEwFGZugZl0oU2NXgqBVakIjGKlvV0dCu/PoMCjY0/gLrc5SPeiZpaKD0xTOMWEUc7NdQQOeYM/POOzNoyfhYqJheQUE0Y5N9cRePLKhoU0h+9FDhZmDm0+t/r+9VezWgVyigmjHHGISzVOD8Q3LXHYKWEPjrb6fSuzx+WA2GTXMnsvlrkOTddvEHBZBP2q/1xfVzQWE8DOj90uWE4nMcyg59xkRpMYwdbjW1Q8/TpiHc+Xlp6Wtr/AzQsnBOnD+gGcUrthPJmcwG0Bb5DGB+RzWPtH4HKws3P0Sn9/7PbISEKWZTAMA0xFEQKt5TL4/X6oYEPfLi6+WdX1tfzW1jwKfGqpT2JibHJyQlYUXxnJJGDhCKdSKSGwMDsrVspdi8cTPb29g4+npvYROhKwGAt5vF4fd41ZrVYDHGO7Hjt/G3GISzVOD85K0h2MRyXGLGRWca0yxmptmrZOpF/ZrIY8r815KyqexNiDR81v2/ZLxpuH+z/ttwADADC5MDB+sDH1AAAAAElFTkSuQmCC"};
+var IMGMAP = null;
+var VARIANT = "pwa";
+
+// ------------------------------------------------------------ language (follows the device, like the original)
+var LANG = (function () {
+  try {
+    var l = String((navigator.languages && navigator.languages[0]) || navigator.language || 'en').toLowerCase();
+    if (l.indexOf('ru') === 0) return 'ru';
+    if (l.indexOf('uk') === 0) return 'uk';
+  } catch (e) {}
+  return 'en';
+})();
+var T = I18N[LANG];
+document.documentElement.lang = LANG;
+
+// ------------------------------------------------------------ helpers
+var app = document.getElementById('app');
+function $(s, r) { return (r || document).querySelector(s); }
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function fmt(s) { var args = Array.prototype.slice.call(arguments, 1), i = 0; return s.replace(/%[sd]/g, function () { return String(args[i++]); }); }
+function pct(x) { return Math.round(x * 100 + 1e-9); }
+function dec2(x) { return x.toFixed(2).replace('.', T.dec); }
+function num(x) { return Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x)) : dec2(x); }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function plural(n, forms) {
+  if (forms.length === 2) return n === 1 ? forms[0] : forms[1];
+  var a = n % 10, b = n % 100;
+  if (a === 1 && b !== 11) return forms[0];
+  if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return forms[1];
+  return forms[2];
+}
+var coarse = false;
+try { coarse = window.matchMedia('(pointer:coarse)').matches; } catch (e) {}
+
+// ------------------------------------------------------------ test data
+var P = DATA.profile;
+var Q = [];
+DATA.sections.forEach(function (s, si) {
+  s.q.forEach(function (q) {
+    q.sec = si;
+    if (q.t === 'select') q.multi = q.ch.filter(function (c) { return c.k; }).length !== 1;
+    if (q.t === 'classify') {
+      q.items = [];
+      q.cats.forEach(function (c, ci) { c.it.forEach(function (x) { q.items.push({ c: x, cat: ci }); }); });
+    }
+    Q.push(q);
+  });
+});
+var DATA_ID = DATA.id;
+var KEY = 'cxr-tb-2021-yaushev:session';
+
+function rc(tokens) {
+  var h = '';
+  for (var k = 0; k < tokens.length; k++) {
+    var t = tokens[k];
+    if (t === 0) h += '<br>';
+    else if (typeof t === 'string') h += esc(t);
+    else if (t && t.i) h += '<img src="' + esc(IMGMAP ? IMGMAP[t.i] : t.i) + '" alt="" draggable="false" decoding="async">';
+  }
+  if (tokens.length && tokens[tokens.length - 1] === 0) h += '​';
+  return h;
+}
+function summary(tokens) {
+  var parts = [];
+  tokens.forEach(function (t) { if (typeof t === 'string') parts.push(t); else if (t && t.i) parts.push('...'); });
+  return parts.join(' ').replace(/\s+$/, '');
+}
+
+// ------------------------------------------------------------ session
+var S = null;
+var ui = { picked: null, tab: 0, review: 0, sortCol: -1, sortDir: 1, showCorrect: false, reviewCorrect: false };
+function practice() { return !!S && S.mode === 'practice'; }
+function sessionSize() {
+  var n = 0;
+  DATA.sections.forEach(function (s, si) {
+    var c = Q.filter(function (q) { return q.sec === si && q.en; }).length;
+    n += P.perSection > 0 ? Math.min(P.perSection, c) : c;
+  });
+  return n;
+}
+
+function load() {
+  try {
+    var t = localStorage.getItem(KEY);
+    if (!t) return null;
+    var s = JSON.parse(t);
+    if (!s || s.v !== 1 || s.id !== DATA_ID || !s.it || !s.it.length) return null;
+    return s;
+  } catch (e) { return null; }
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+function forget() { try { localStorage.removeItem(KEY); } catch (e) {} }
+
+function newSession(mode) {
+  var pick = [];
+  DATA.sections.forEach(function (s, si) {
+    var ids = [];
+    Q.forEach(function (q, i) { if (q.sec === si && q.en) ids.push(i); });
+    shuffle(ids);
+    var n = P.perSection > 0 ? Math.min(P.perSection, ids.length) : ids.length;
+    pick = pick.concat(ids.slice(0, n).sort(function (a, b) { return a - b; }));
+  });
+  if (P.shuffleQuestions) shuffle(pick);
+  var it = pick.map(function (qi) {
+    var q = Q[qi], o;
+    if (q.t === 'select') {
+      o = q.ch.map(function (_, i) { return i; });
+      if (P.shuffleChoices) {
+        var free = o.filter(function (i) { return !q.ch[i].f; });
+        shuffle(free);
+        o = o.map(function (i) { return q.ch[i].f ? i : free.shift(); });
+      }
+    } else if (q.t === 'classify') {
+      o = shuffle(q.items.map(function (_, i) { return i; }));
+    } else {
+      o = shuffle(q.pairs.map(function (_, i) { return i; }));
+    }
+    return { q: qi, o: o };
+  });
+  mode = mode === 'practice' ? 'practice' : 'test';
+  return { v: 1, id: DATA_ID, mode: mode, start: Date.now(), dur: mode === 'practice' ? 0 : P.duration * 60000,
+    it: it, ans: {}, cur: 0, pend: null, exp: false, done: false };
+}
+function correctAnswer(i) {
+  var q = Q[S.it[i].q], p = {};
+  if (q.t === 'select') return { s: q.ch.map(function (c, k) { return c.k ? k : -1; }).filter(function (k) { return k >= 0; }) };
+  if (q.t === 'classify') q.items.forEach(function (x, k) { p[k] = x.cat; });
+  else q.pairs.forEach(function (_, b) { p[b] = b; });
+  return { p: p };
+}
+
+function answered(i) { return Object.prototype.hasOwnProperty.call(S.ans, i); }
+function editable(i) { return !S.done && !answered(i) && !S.exp; }
+function remaining() { return S.dur > 0 ? S.start + S.dur - Date.now() : Infinity; }
+
+function isCorrect(i, a) {
+  var q = Q[S.it[i].q];
+  if (!a) return false;
+  if (q.t === 'select') {
+    var want = [], k;
+    for (k = 0; k < q.ch.length; k++) if (q.ch[k].k) want.push(k);
+    var got = a.s.slice().sort(function (x, y) { return x - y; });
+    if (want.length !== got.length) return false;
+    for (k = 0; k < want.length; k++) if (want[k] !== got[k]) return false;
+    return true;
+  }
+  if (q.t === 'classify') {
+    return q.items.every(function (x, k) { return a.p[k] !== undefined && +a.p[k] === x.cat; });
+  }
+  return q.pairs.every(function (_, b) { return a.p[b] !== undefined && +a.p[b] === b; });
+}
+function totals(filterSec) {
+  var tot = 0, got = 0, n = 0;
+  S.it.forEach(function (it, i) {
+    var q = Q[it.q];
+    if (filterSec !== undefined && q.sec !== filterSec) return;
+    n++; tot += q.w;
+    if (answered(i) && isCorrect(i, S.ans[i])) got += q.w;
+  });
+  return { tot: tot, got: got, n: n };
+}
+function markFor(frac) {
+  var m = '';
+  P.marks.forEach(function (x) { if (frac + 1e-9 >= x.lb) m = x.t; });
+  return m;
+}
+
+// ------------------------------------------------------------ actions
+function go(i) {
+  if (S.pend || i < 0 || i >= S.it.length) return;
+  S.cur = i; ui.picked = null; ui.showCorrect = false; save(); renderPlayer(false);
+}
+function canEdit() { return editable(S.cur) && !ui.showCorrect; }
+function submit() {
+  if (!S.pend || S.exp || S.done) return;
+  var i = S.cur, n = S.it.length;
+  S.ans[i] = S.pend.a; S.pend = null; ui.picked = null; ui.showCorrect = false;
+  var next = -1;
+  for (var k = 1; k < n; k++) { var j = (i + k) % n; if (!answered(j)) { next = j; break; } }
+  if (next >= 0) { S.cur = next; save(); renderPlayer(false); }
+  else { save(); renderPlayer(true); openFinish(); }
+}
+function finishTest() {
+  S.pend = null; S.done = true; S.end = Date.now(); save();
+  ui.tab = 0; ui.review = 0; ui.picked = null; ui.sortCol = -1; ui.sortDir = 1; ui.showCorrect = false; ui.reviewCorrect = false;
+  closeModal(); render();
+}
+function begin(mode) {
+  S = newSession(mode); save();
+  ui.picked = null; ui.showCorrect = false; closeModal(); render();
+}
+function restart() {
+  forget(); S = null;
+  ui.picked = null; ui.showCorrect = false; closeModal(); render();
+}
+function clickChoice(ci) {
+  var i = S.cur, q = Q[S.it[i].q];
+  if (!canEdit()) return;
+  var cur = S.pend ? S.pend.a.s.slice() : [], s;
+  if (q.multi) {
+    var k = cur.indexOf(ci);
+    if (k >= 0) cur.splice(k, 1); else cur.push(ci);
+    s = cur;
+  } else {
+    if (S.pend && cur.length === 1 && cur[0] === ci) return;
+    s = [ci];
+  }
+  S.pend = { i: i, a: { s: s } }; save(); renderPlayer(true);
+}
+function doDrop(id, tgt) {
+  var i = S.cur, q = Q[S.it[i].q];
+  if (!canEdit() || tgt == null) return;
+  var p = {}, src = S.pend ? S.pend.a.p : {};
+  Object.keys(src).forEach(function (k) { p[k] = src[k]; });
+  if (q.t === 'classify') {
+    if (tgt === 'p') { if (p[id] === undefined) return; delete p[id]; }
+    else { var ci = +tgt.slice(1); if (p[id] === ci) return; p[id] = ci; }
+  } else {
+    var from = null;
+    Object.keys(p).forEach(function (k) { if (+p[k] === id) from = k; });
+    if (tgt === 'p') { if (from === null) return; delete p[from]; }
+    else {
+      var bi = +tgt.slice(1);
+      if (from !== null && +from === bi) return;
+      if (from !== null) delete p[from];
+      p[bi] = id;
+    }
+  }
+  ui.picked = null;
+  S.pend = { i: i, a: { p: p } }; save(); renderPlayer(true);
+}
+function tapItem(id) {
+  if (!canEdit()) return;
+  ui.picked = ui.picked === id ? null : id;
+  renderPlayer(true);
+}
+
+// ------------------------------------------------------------ timer
+function timeText(ms) {
+  if (ms <= 0) return '00:00:00';
+  var s = Math.ceil(ms / 1000);
+  if (s < 30) return '00:00:' + pad(s);
+  var m = Math.ceil(ms / 60000);
+  return pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+}
+function tick() {
+  if (!S || S.done) return;
+  var r = remaining();
+  if (S.dur > 0 && r <= 0 && !S.exp) {
+    S.exp = true;
+    if (S.pend) { S.ans[S.pend.i] = S.pend.a; S.pend = null; }
+    ui.picked = null; save();
+    if ($('#main')) renderPlayer(true);
+  }
+  var box = $('#tbox');
+  if (!box) return;
+  if (S.dur <= 0) { $('.timer').hidden = true; return; }
+  $('#ttext').textContent = timeText(r);
+  $('#tfill').style.width = Math.max(0, Math.min(1, r / S.dur)) * 100 + '%';
+  box.classList.toggle('exp', r <= 0);
+}
+
+// ------------------------------------------------------------ rendering: shared
+function renderDiagram(el, n, cur, cls, locked) {
+  if (el.children.length !== n) {
+    el.innerHTML = '';
+    for (var i = 0; i < n; i++) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.dataset.i = i; b.setAttribute('aria-label', T.qTitle + ' ' + (i + 1));
+      el.appendChild(b);
+    }
+  }
+  for (var k = 0; k < n; k++) {
+    var c = el.children[k];
+    c.className = 'sq ' + cls(k) + (k === cur ? ' cur' : '') + (locked ? ' lock' : '');
+    c.setAttribute('aria-current', k === cur ? 'true' : 'false');
+  }
+  layoutDiagram(el, n);
+}
+function layoutDiagram(el, n) {
+  var w = el.clientWidth || 300, minW = coarse ? 14 : 7, rows = 1;
+  while (rows < 6 && w / Math.ceil(n / rows) < minW) rows++;
+  el.style.gridTemplateColumns = 'repeat(' + Math.ceil(n / rows) + ',minmax(0,1fr))';
+}
+function itemHtml(c, id, ed) {
+  return '<div class="itm' + (ui.picked === id && ed ? ' picked' : '') + '" data-id="' + id + '">' + rc(c) + '</div>';
+}
+function renderQuestion(i, ed, a) {
+  var it = S.it[i], q = Q[it.q], h = '<div class="q"><div class="form">' + rc(q.c) + '</div>';
+  if (q.t === 'select') {
+    var sel = a ? a.s : [];
+    h += '<div class="choices" role="' + (q.multi ? 'group' : 'radiogroup') + '">';
+    it.o.forEach(function (ci) {
+      var on = sel.indexOf(ci) >= 0;
+      h += '<div class="choice' + (on ? ' on' : '') + (ed ? '' : ' dis') + '" data-c="' + ci + '" role="' + (q.multi ? 'checkbox' : 'radio') +
+        '" aria-checked="' + on + '" aria-disabled="' + !ed + '" tabindex="' + (ed ? 0 : -1) + '"><span class="mark ' + (q.multi ? 'c' : 'r') +
+        '"></span><div class="ct">' + rc(q.ch[ci].c) + '</div></div>';
+    });
+    h += '</div>';
+  } else if (q.t === 'classify') {
+    var p = (a && a.p) || {};
+    h += '<div class="cls' + (ed ? ' ed' : '') + '"><div class="cats">';
+    q.cats.forEach(function (c, ci) {
+      var inside = it.o.filter(function (x) { return p[x] !== undefined && +p[x] === ci; });
+      h += '<div class="cat drop" data-drop="c' + ci + '"><div class="cat-h">' + rc(c.c) + '</div><div class="cat-b">' +
+        inside.map(function (x) { return itemHtml(q.items[x].c, x, ed); }).join('') + '</div></div>';
+    });
+    h += '</div><div class="vsep"></div><div class="pool drop" data-drop="p">';
+    it.o.forEach(function (x) {
+      h += p[x] !== undefined ? '<div class="itm ph" aria-hidden="true">' + rc(q.items[x].c) + '</div>' : itemHtml(q.items[x].c, x, ed);
+    });
+    h += '</div></div>';
+  } else {
+    var pm = (a && a.p) || {}, used = {};
+    Object.keys(pm).forEach(function (k) { used[pm[k]] = true; });
+    h += '<div class="mt' + (ed ? ' ed' : '') + '"><div class="mrows">';
+    q.pairs.forEach(function (pr, bi) {
+      var m = pm[bi] !== undefined ? +pm[bi] : -1;
+      h += '<div class="mrow drop" data-drop="s' + bi + '"><div class="base">' + rc(pr[0]) + '</div><div class="conn"></div><div class="mslot">' +
+        (m >= 0 ? itemHtml(q.pairs[m][1], m, ed) : '') + '</div></div>';
+    });
+    h += '</div><div class="vsep"></div><div class="pool drop" data-drop="p">';
+    it.o.forEach(function (x) {
+      h += used[x] ? '<div class="itm ph" aria-hidden="true">' + rc(q.pairs[x][1]) + '</div>' : itemHtml(q.pairs[x][1], x, ed);
+    });
+    h += '</div></div>';
+  }
+  return h + '</div>';
+}
+
+// ------------------------------------------------------------ rendering: test player
+function buildPlayer() {
+  app.innerHTML =
+    '<header class="top"><div class="qlabel">' + esc(T.qTitle) + '&nbsp;<b id="qi"></b>&nbsp;<span id="qn"></span></div>' +
+    '<div class="diagram" id="diag"></div><button class="btn" id="bBrowse" type="button">' + esc(T.browse) + '</button></header>' +
+    '<main class="main" id="main"></main>' +
+    '<footer class="bot"><button class="btn def" id="bSubmit" type="button">' + esc(T.submit) + '</button>' +
+    '<div class="nav"><button class="tb" id="bPrev" type="button" title="' + esc(T.prevHint) + ' (F2)"><img src="' + ICONS.back + '" alt="">' + esc(T.prev) + '</button>' +
+    '<button class="tb" id="bNext" type="button" title="' + esc(T.nextHint) + ' (F3)"><img src="' + ICONS.advance + '" alt="">' + esc(T.next) + '</button></div>' +
+    '<div class="res"' + (P.fbTotal ? '' : ' hidden') + '>' + esc(T.playerResult) + '&nbsp;<b id="tot"></b></div>' +
+    '<div class="timer" title="' + esc(T.timeHint) + '"><img src="' + ICONS.time + '" alt="" width="16" height="16"><div class="tbox" id="tbox" role="timer" aria-label="' + esc(T.timeHint) + '"><div class="tfill" id="tfill"></div><span id="ttext"></span></div></div>' +
+    '<button class="tb" id="bCorrect" type="button" aria-pressed="false" hidden><img src="' + ICONS.correct + '" alt="">' + esc(T.correctAnswer) + '</button>' +
+    '<button class="btn" id="bFinish" type="button">' + esc(T.finishWork) + '</button></footer>';
+  $('#bSubmit').onclick = submit;
+  $('#bCorrect').onclick = function () { ui.showCorrect = !ui.showCorrect; ui.picked = null; renderPlayer(true); };
+  $('#bPrev').onclick = function () { go(S.cur - 1); };
+  $('#bNext').onclick = function () { go(S.cur + 1); };
+  $('#bBrowse').onclick = openBrowse;
+  $('#bFinish').onclick = function () { if (!S.pend) openFinish(); };
+  $('#diag').onclick = function (e) { var b = e.target.closest('.sq'); if (b && !S.pend) go(+b.dataset.i); };
+  var main = $('#main');
+  main.addEventListener('click', onMainClick);
+  main.addEventListener('keydown', function (e) {
+    var c = e.target.closest && e.target.closest('.choice');
+    if (c && (e.key === ' ' || e.key === 'Spacebar')) { e.preventDefault(); clickChoice(+c.dataset.c); }
+  });
+  main.addEventListener('pointerdown', onPointerDown);
+  main.addEventListener('contextmenu', function (e) { if (e.target.closest('.itm')) e.preventDefault(); });
+  app.dataset.mode = 'test';
+}
+function renderPlayer(keep) {
+  if (app.dataset.mode !== 'test') buildPlayer();
+  var n = S.it.length, i = S.cur;
+  $('#qi').textContent = i + 1;
+  $('#qn').textContent = fmt(T.qOf, n);
+  renderDiagram($('#diag'), n, i, function (k) { return answered(k) ? 'a' : ''; }, !!S.pend);
+  var main = $('#main'), st = keep ? main.scrollTop : 0;
+  var a = S.pend && S.pend.i === i ? S.pend.a : S.ans[i];
+  if (ui.showCorrect && practice()) main.innerHTML = renderQuestion(i, false, correctAnswer(i));
+  else { ui.showCorrect = false; main.innerHTML = renderQuestion(i, editable(i), a); }
+  main.scrollTop = st;
+  var bc = $('#bCorrect');
+  bc.hidden = !practice();
+  bc.classList.toggle('down', ui.showCorrect);
+  bc.setAttribute('aria-pressed', ui.showCorrect ? 'true' : 'false');
+  $('.timer').hidden = S.dur <= 0;
+  var locked = !!S.pend;
+  $('#bSubmit').disabled = !(S.pend && !S.exp);
+  $('#bPrev').disabled = locked || i === 0;
+  $('#bNext').disabled = locked || i === n - 1;
+  $('#bBrowse').disabled = locked;
+  $('#bFinish').disabled = locked;
+  var t = totals();
+  if ($('#tot')) $('#tot').textContent = (t.tot ? pct(t.got / t.tot) : 0) + '%';
+  tick();
+}
+function onMainClick(e) {
+  var c = e.target.closest('.choice');
+  if (c) { clickChoice(+c.dataset.c); return; }
+  if (e.target.closest('.itm')) return;
+  if (ui.picked !== null) {
+    var d = e.target.closest('.drop');
+    if (d) doDrop(ui.picked, d.dataset.drop);
+  }
+}
+
+// ------------------------------------------------------------ drag and drop (mouse, pen and touch)
+var drag = null;
+function onPointerDown(e) {
+  var el = e.target.closest('.itm');
+  if (!el || el.classList.contains('ph') || !canEdit()) return;
+  if (e.button !== undefined && e.button !== 0) return;
+  var st = { id: +el.dataset.id, el: el, x: e.clientX, y: e.clientY, pid: e.pointerId, type: e.pointerType, on: false, moved: false, timer: 0 };
+  drag = st;
+  if (e.pointerType === 'mouse') e.preventDefault();
+  else st.timer = setTimeout(function () { if (drag === st && !st.moved) startDrag(st, st.x, st.y); }, 220);
+  window.addEventListener('pointermove', onPointerMove, { passive: false });
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerCancel);
+}
+function onPointerMove(e) {
+  var st = drag;
+  if (!st || e.pointerId !== st.pid) return;
+  var d = Math.abs(e.clientX - st.x) + Math.abs(e.clientY - st.y);
+  if (!st.on) {
+    if (d > (st.type === 'mouse' ? 4 : 10)) {
+      st.moved = true;
+      if (st.type === 'mouse') startDrag(st, e.clientX, e.clientY); else clearTimeout(st.timer);
+    }
+  }
+  if (st.on) { e.preventDefault(); st.px = e.clientX; st.py = e.clientY; placeGhost(st); }
+}
+function onPointerUp(e) {
+  var st = drag;
+  if (!st || e.pointerId !== st.pid) return;
+  clearTimeout(st.timer); unlisten();
+  if (st.on) { var t = targetAt(e.clientX, e.clientY); stopDrag(st); drag = null; doDrop(st.id, t); return; }
+  drag = null;
+  if (!st.moved) tapItem(st.id);
+}
+function onPointerCancel(e) {
+  var st = drag;
+  if (!st || e.pointerId !== st.pid) return;
+  clearTimeout(st.timer); unlisten();
+  if (st.on) stopDrag(st);
+  drag = null;
+}
+function unlisten() {
+  window.removeEventListener('pointermove', onPointerMove);
+  window.removeEventListener('pointerup', onPointerUp);
+  window.removeEventListener('pointercancel', onPointerCancel);
+}
+document.addEventListener('touchmove', function (e) { if (drag && drag.on) e.preventDefault(); }, { passive: false });
+function startDrag(st, x, y) {
+  var r = st.el.getBoundingClientRect();
+  st.on = true; st.dx = x - r.left; st.dy = y - r.top; st.px = x; st.py = y;
+  var g = st.el.cloneNode(true);
+  g.classList.add('ghost'); g.classList.remove('picked'); g.style.width = r.width + 'px';
+  document.body.appendChild(g);
+  st.ghost = g; st.el.classList.add('lift');
+  ui.picked = null;
+  placeGhost(st);
+  st.raf = requestAnimationFrame(function loop() { autoScroll(st); if (st.on) st.raf = requestAnimationFrame(loop); });
+}
+function placeGhost(st) {
+  st.ghost.style.transform = 'translate(' + (st.px - st.dx) + 'px,' + (st.py - st.dy) + 'px)';
+  var t = targetEl(st.px, st.py);
+  if (st.over !== t) { if (st.over) st.over.classList.remove('over'); if (t) t.classList.add('over'); st.over = t; }
+}
+function autoScroll(st) {
+  var m = $('#main'); if (!m) return;
+  var r = m.getBoundingClientRect(), edge = 48, v = 0;
+  if (st.py < r.top + edge) v = -Math.ceil((r.top + edge - st.py) / 4);
+  else if (st.py > r.bottom - edge) v = Math.ceil((st.py - r.bottom + edge) / 4);
+  if (v) { m.scrollTop += v; placeGhost(st); }
+}
+function stopDrag(st) {
+  st.on = false; cancelAnimationFrame(st.raf);
+  if (st.ghost) st.ghost.remove();
+  if (st.over) st.over.classList.remove('over');
+  st.el.classList.remove('lift');
+}
+function targetEl(x, y) { var el = document.elementFromPoint(x, y); return el ? el.closest('.drop') : null; }
+function targetAt(x, y) { var t = targetEl(x, y); return t ? t.dataset.drop : null; }
+
+// ------------------------------------------------------------ dialogs
+function modal(html, onReady) {
+  closeModal();
+  var o = document.createElement('div');
+  o.className = 'ovl'; o.innerHTML = html;
+  document.body.appendChild(o);
+  if (onReady) onReady(o);
+  var f = o.querySelector('[data-focus]') || o.querySelector('button');
+  if (f) f.focus();
+}
+function closeModal() { var o = $('.ovl'); if (o) o.remove(); }
+function svgOk() { return '<svg class="ico" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6.5" fill="#5cb85c" stroke="#3d8b3d"/><path d="M3.8 7.2l2.2 2.2 4.3-4.6" fill="none" stroke="#fff" stroke-width="1.8"/></svg>'; }
+function svgNo() { return '<svg class="ico" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="#e03b2f" stroke-width="2.6" stroke-linecap="round"/></svg>'; }
+function openFinish() {
+  modal('<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dT"><div class="dlg-t" id="dT">' + esc(T.confirm) + '</div>' +
+    '<div class="dlg-b"><span class="qico" aria-hidden="true">?</span><span>' + esc(T.finishQ) + '</span></div>' +
+    '<div class="dlg-btns"><button class="btn def" id="dFin" type="button" data-focus>' + svgOk() + esc(T.finish) + '</button>' +
+    '<button class="btn" id="dNo" type="button">' + svgNo() + esc(T.notNow) + '</button></div></div>',
+    function (o) { $('#dFin', o).onclick = finishTest; $('#dNo', o).onclick = closeModal; });
+}
+function openBrowse() {
+  if (S.pend) return;
+  var sel = S.cur;
+  var rows = S.it.map(function (it, k) {
+    return '<div class="br-row' + (answered(k) ? ' done' : '') + (k === S.cur ? ' cur' : '') + '" data-k="' + k + '" role="option">' +
+      '<span class="br-n">' + (k + 1) + '</span><span class="br-t">' + esc(summary(Q[it.q].c)) + '</span></div>';
+  }).join('');
+  modal('<div class="dlg brw" role="dialog" aria-modal="true" aria-labelledby="bT"><div class="dlg-t" id="bT">' + esc(T.browserTitle) + '</div>' +
+    '<div class="br-list" role="listbox" tabindex="0" id="brl">' + rows + '</div>' +
+    '<div class="dlg-btns left"><button class="btn def" id="bSel" type="button">' + esc(T.select) + '</button></div></div>',
+    function (o) {
+      var list = $('#brl', o);
+      function mark() {
+        Array.prototype.forEach.call(list.children, function (r, k) { r.classList.toggle('sel', k === sel); r.setAttribute('aria-selected', k === sel); });
+      }
+      function pickGo() { closeModal(); go(sel); }
+      mark();
+      var cur = list.children[sel]; if (cur) cur.scrollIntoView({ block: 'center' });
+      list.onclick = function (e) {
+        var r = e.target.closest('.br-row'); if (!r) return;
+        var k = +r.dataset.k;
+        if (k === sel && coarse) { pickGo(); return; }
+        sel = k; mark();
+      };
+      list.ondblclick = function (e) { var r = e.target.closest('.br-row'); if (r) { sel = +r.dataset.k; pickGo(); } };
+      list.onkeydown = function (e) {
+        if (e.key === 'ArrowDown') { sel = Math.min(S.it.length - 1, sel + 1); }
+        else if (e.key === 'ArrowUp') { sel = Math.max(0, sel - 1); }
+        else if (e.key === 'Enter') { pickGo(); return; }
+        else return;
+        e.preventDefault(); mark(); list.children[sel].scrollIntoView({ block: 'nearest' });
+      };
+      $('#bSel', o).onclick = pickGo;
+    });
+}
+function openAbout() {
+  var txt = DATA.title + '\n©Yaushev MF Kazan State Medical University\n\n' +
+    'Web version of the test player, made to work like the original Windows program on phones and tablets.\n\n' +
+    'Original test player: Iren\n© 2012–2020 Sergey Ostanin, https://irenproject.ru\nLicensed under the Apache License, Version 2.0.\n\n' +
+    'Toolbar icons: Fugue Icons © Yusuke Kamiyamane, licensed under Creative Commons Attribution 3.0.';
+  modal('<div class="dlg about" role="dialog" aria-modal="true" aria-labelledby="aT"><div class="dlg-t" id="aT">' + esc(T.aboutTitle) + '</div>' +
+    '<div class="about-txt">' + esc(txt) + '</div><div class="dlg-btns"><button class="btn" id="aC" type="button" data-focus>' + esc(T.aboutClose) + '</button></div></div>',
+    function (o) { $('#aC', o).onclick = closeModal; });
+}
+
+// ------------------------------------------------------------ rendering: results
+function pie(frac) {
+  var s = 200, c = 100, r = 99;
+  var base = '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="' + (frac >= 0.99999 ? 'var(--ok)' : 'var(--pie)') + '" stroke="#000" stroke-width="1"/>';
+  if (frac > 0 && frac < 0.99999) {
+    var a = frac * 2 * Math.PI, x = c + r * Math.sin(a), y = c - r * Math.cos(a);
+    base += '<path d="M' + c + ',' + c + ' L' + c + ',' + (c - r) + ' A' + r + ',' + r + ' 0 ' + (frac > 0.5 ? 1 : 0) + ' 1 ' + x.toFixed(2) + ',' + y.toFixed(2) + ' Z" fill="var(--ok)" stroke="#000" stroke-width="1"/>';
+  }
+  return '<svg class="pie" viewBox="0 0 ' + s + ' ' + s + '" role="img" aria-label="' + pct(frac) + '%">' + base + '</svg>';
+}
+function render() {
+  if (!S) renderStart(); else if (S.done) renderResults(); else renderPlayer(false);
+}
+function renderStart() {
+  app.dataset.mode = 'start';
+  var n = sessionSize(), m = P.duration;
+  function d(s) {
+    return s.replace('{n}', n).replace('{q}', plural(n, T.qWords)).replace('{m}', m).replace('{min}', plural(m, T.minWords));
+  }
+  app.innerHTML = '<div class="start"><h1>' + esc(DATA.title) + '</h1><p class="org">©Yaushev MF Kazan State Medical University</p>' +
+    '<div class="modes"><button class="mode def" id="mTest" type="button"><b>' + esc(T.modeTest) + '</b><span>' + esc(d(T.descTest)) + '</span></button>' +
+    '<button class="mode" id="mPractice" type="button"><b>' + esc(T.modePractice) + '</b><span>' + esc(d(T.descPractice)) + '</span></button></div>' +
+    '<button class="lnk" id="sAbout" type="button">' + esc(T.aboutLink) + '</button></div>';
+  $('#mTest').onclick = function () { begin('test'); };
+  $('#mPractice').onclick = function () { begin('practice'); };
+  $('#sAbout').onclick = openAbout;
+}
+function renderResults() {
+  app.dataset.mode = 'results';
+  var tabs = [T.tabTotal, T.tabQuestions, T.tabSections];
+  app.innerHTML = '<div class="results"><div class="tabs" role="tablist">' + tabs.map(function (t, k) {
+    return '<button class="tab' + (ui.tab === k ? ' sel' : '') + '" role="tab" type="button" aria-selected="' + (ui.tab === k) + '" data-tab="' + k + '">' + esc(t) + '</button>';
+  }).join('') + '</div><div class="tabpage" id="tp" role="tabpanel"></div>' +
+    '<div class="rbot"><button class="lnk" id="bAbout" type="button">' + esc(T.aboutLink) + '</button><button class="btn" id="bClose" type="button">' + esc(T.close) + '</button></div></div>';
+  $('.tabs').onclick = function (e) { var b = e.target.closest('.tab'); if (b) { ui.tab = +b.dataset.tab; renderResults(); } };
+  $('#bAbout').onclick = openAbout;
+  $('#bClose').onclick = restart;
+  var tp = $('#tp'), t = totals(), frac = t.tot ? t.got / t.tot : 0;
+  if (ui.tab === 0) {
+    var kv = '';
+    if (P.resPercent) kv += '<div class="k">' + esc(T.scoreResult) + '</div><div class="v">' + pct(frac) + '%</div>';
+    if (P.resMark) kv += '<div class="k">' + esc(T.grade) + '</div><div class="v">' + esc(markFor(frac)) + '</div>';
+    if (P.resPoints) kv += '<div class="k s">' + esc(T.pointsEarned) + '</div><div class="v s">' + esc(fmt(T.weightRight, dec2(t.got), num(t.tot))) + '</div>';
+    kv += '<div class="k s">' + esc(T.offered) + '</div><div class="v s">' + S.it.length + '</div>';
+    tp.innerHTML = '<div class="overall">' + pie(frac) + '<div class="kv">' + kv + '</div></div>';
+  } else if (ui.tab === 1) {
+    renderReview(tp);
+  } else {
+    renderSections(tp);
+  }
+}
+function renderReview(tp) {
+  var n = S.it.length, k = ui.review;
+  var res = answered(k) && isCorrect(k, S.ans[k]) ? 100 : 0;
+  var showSw = practice() || P.qCorrect, showC = showSw && ui.reviewCorrect;
+  var sw = showSw ? '<div class="sw"><button class="tb' + (showC ? '' : ' down') + '" id="rUser" type="button" aria-pressed="' + !showC + '"><img src="' + ICONS.user + '" alt="">' + esc(T.yourAnswer) + '</button>' +
+    '<button class="tb' + (showC ? ' down' : '') + '" id="rCorr" type="button" aria-pressed="' + showC + '"><img src="' + ICONS.correct + '" alt="">' + esc(T.correctAnswer) + '</button></div>' : '';
+  tp.innerHTML = '<div class="qs"><div class="qs-top"><div class="qlabel">' + esc(T.qTitle) + '&nbsp;<b>' + (k + 1) + '</b>&nbsp;' + esc(fmt(T.qOf, n)) + '</div>' +
+    '<div class="diagram" id="rdiag"></div>' + sw + '</div><div class="qs-main" id="rmain">' + renderQuestion(k, false, showC ? correctAnswer(k) : S.ans[k]) + '</div>' +
+    (P.qPercent ? '<div class="qs-det">' + esc(T.qsResult) + '&nbsp;<b>' + res + '%</b></div>' : '') +
+    '<div class="qs-nav"><button class="tb" id="rPrev" type="button" title="' + esc(T.qsPrevHint) + ' (F2)"><img src="' + ICONS.back + '" alt="">' + esc(T.prev) + '</button>' +
+    '<button class="tb" id="rNext" type="button" title="' + esc(T.qsNextHint) + ' (F3)"><img src="' + ICONS.advance + '" alt="">' + esc(T.next) + '</button></div></div>';
+  var d = $('#rdiag');
+  renderDiagram(d, n, k, function (i) { return answered(i) ? (isCorrect(i, S.ans[i]) ? 'ok' : 'bad') : ''; }, false);
+  d.onclick = function (e) { var b = e.target.closest('.sq'); if (b) { ui.review = +b.dataset.i; renderReview(tp); } };
+  if (showSw) {
+    $('#rUser').onclick = function () { ui.reviewCorrect = false; renderReview(tp); };
+    $('#rCorr').onclick = function () { ui.reviewCorrect = true; renderReview(tp); };
+  }
+  $('#rPrev').disabled = k === 0; $('#rNext').disabled = k === n - 1;
+  $('#rPrev').onclick = function () { if (ui.review > 0) { ui.review--; renderReview(tp); } };
+  $('#rNext').onclick = function () { if (ui.review < n - 1) { ui.review++; renderReview(tp); } };
+}
+function renderSections(tp) {
+  var rows = [];
+  DATA.sections.forEach(function (s, si) {
+    var t = totals(si);
+    if (t.n) rows.push({ k: si, t: s.title, r: t.tot ? t.got / t.tot : 0, got: t.got, tot: t.tot, n: t.n });
+  });
+  var cols = [{ h: T.colSection, f: 't', num: false }];
+  if (P.sPercent) cols.push({ h: T.colResult, f: 'r', num: true });
+  if (P.sPoints) { cols.push({ h: T.colEarned, f: 'got', num: true }); cols.push({ h: T.colTotal, f: 'tot', num: true }); }
+  if (P.sCount) cols.push({ h: T.colCount, f: 'n', num: true });
+  if (ui.sortCol >= 0) {
+    var f = cols[ui.sortCol].f;
+    rows.sort(function (a, b) { var x = a[f], y = b[f]; return (typeof x === 'string' ? x.localeCompare(y) : x - y) * ui.sortDir || a.k - b.k; });
+  }
+  var arrowCol = ui.sortCol >= 0 ? ui.sortCol : 0, arrow = ui.sortDir > 0 ? '▲' : '▼';
+  var h = '<div class="tblwrap"><table class="sec"><thead><tr>' + cols.map(function (c, k) {
+    return '<th class="' + (c.num ? 'num' : '') + '" data-col="' + k + '" scope="col">' + esc(c.h) + (k === arrowCol ? '<span class="ar">' + arrow + '</span>' : '') + '</th>';
+  }).join('') + '<th class="blank" aria-hidden="true"></th></tr></thead><tbody>';
+  rows.forEach(function (r) {
+    h += '<tr>' + cols.map(function (c) {
+      var v = r[c.f];
+      if (c.f === 'r') v = pct(v); else if (c.f === 'got') v = dec2(v); else if (c.f === 'tot') v = num(v);
+      return '<td class="' + (c.num ? 'num' : '') + '">' + esc(v) + '</td>';
+    }).join('') + '<td></td></tr>';
+  });
+  tp.innerHTML = h + '</tbody></table></div>';
+  $('table.sec thead', tp).onclick = function (e) {
+    var th = e.target.closest('th[data-col]'); if (!th) return;
+    var k = +th.dataset.col;
+    if (ui.sortCol === k) ui.sortDir = -ui.sortDir; else { ui.sortCol = k; ui.sortDir = 1; }
+    renderSections(tp);
+  };
+}
+
+// ------------------------------------------------------------ keyboard
+document.addEventListener('keydown', function (e) {
+  if ($('.ovl')) { if (e.key === 'Escape') closeModal(); return; }
+  if (!S) return;
+  if (S.done) {
+    if (ui.tab !== 1) return;
+    if (e.key === 'F2') { e.preventDefault(); var p = $('#rPrev'); if (p && !p.disabled) p.click(); }
+    if (e.key === 'F3') { e.preventDefault(); var n = $('#rNext'); if (n && !n.disabled) n.click(); }
+    return;
+  }
+  if (e.key === 'F2') { e.preventDefault(); go(S.cur - 1); }
+  else if (e.key === 'F3') { e.preventDefault(); go(S.cur + 1); }
+  else if (e.key === 'Enter' && !(e.target.closest && e.target.closest('button'))) { e.preventDefault(); submit(); }
+});
+
+// ------------------------------------------------------------ start
+S = load();
+render();
+setInterval(tick, 250);
+document.addEventListener('visibilitychange', tick);
+window.addEventListener('resize', function () {
+  var d = $('#diag') || $('#rdiag');
+  if (d && S) layoutDiagram(d, S.it.length);
+});
+if (VARIANT === 'pwa' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+document.title = DATA.title;
+})();
+</script>
+
+</body>
+</html>
